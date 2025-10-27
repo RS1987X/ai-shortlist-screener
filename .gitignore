@@ -1,0 +1,49 @@
+
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+.venv/
+venv/
+.env
+.ipynb_checkpoints/
+.cache/
+.mypy_cache/
+.pytest_cache/
+.DS_Store
+node_modules/
+.playwright/
+
+# Editors/IDE settings
+.vscode/
+.idea/
+
+# Python build artifacts
+.Python
+build/
+develop-eggs/
+.eggs/
+pip-wheel-metadata/
+share/python-wheels/
+
+# Test/coverage artifacts
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Environments
+.python-version
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# OS/editor backups
+*~
+Thumbs.db
+
+# Windows ADS metadata (from downloaded files)
+*:Zone.Identifier

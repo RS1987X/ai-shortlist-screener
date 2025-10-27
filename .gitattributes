@@ -1,0 +1,23 @@
+* text=auto eol=lf
+
+# Shell/Batch
+*.sh eol=lf
+*.bash eol=lf
+*.bat eol=crlf
+
+# Common text formats
+*.md text eol=lf
+*.txt text eol=lf
+*.csv text eol=lf
+*.tsv text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Images/binaries
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary

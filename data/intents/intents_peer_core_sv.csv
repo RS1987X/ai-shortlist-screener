@@ -1,0 +1,27 @@
+intent_id,category,prompt,budget,constraints,locale
+INT01,Elektroniktillbehör,USB-C-hub med 2× HDMI 4K60 och 100 W PD under 800 kr.,800,2×HDMI 4K60; 100W PD; USB-C; pris < 800 kr,sv-SE
+INT02,Nätverk,Mesh‑Wi‑Fi 3‑pack AX3000 med ethernet‑backhaul under 2 500 kr.,2500,AX3000; 3-pack; ethernet-backhaul; pris < 2500 kr,sv-SE
+INT03,Skärmar,"24"" IPS-skärm 75 Hz, höjdjusterbar, VESA under 1 600 kr.",1600,24 tum; IPS; 75 Hz; höjdjusterbar; VESA; pris < 1600 kr,sv-SE
+INT04,Ström,Powerbank 20 000 mAh med 30 W USB‑C PD under 600 kr.,600,20000 mAh; 30W USB-C PD; flygsäker; pris < 600 kr,sv-SE
+INT05,Dokning,USB‑C‑docka med LAN och 2×DisplayPort som stödjer två 4K‑skärmar under 1 800 kr.,1800,LAN; 2×DP; dual 4K; pris < 1800 kr,sv-SE
+INT06,Köksmaskiner,"Airfryer 5–6 L under 800 kr, diskmaskinsäker korg och non‑stick utan PFAS enligt PDP.",800,5–6 L; diskmaskinsäker korg; non‑stick utan PFAS enl. PDP; pris < 800 kr,sv-SE
+INT07,Inomhusklimat,"Luftrenare CADR ≥ 200 m³/h, HEPA H13 under 2 000 kr.",2000,CADR ≥ 200 m³/h; HEPA H13; pris < 2000 kr,sv-SE
+INT08,Belysning,"Arbetsbelysning ≥ 2 000 lm, IP65, 230 V under 600 kr.",600,≥2000 lm; IP65; 230 V; pris < 600 kr,sv-SE
+INT09,Mätverktyg,"Lasermätare ±2 mm @ 30 m, IP54 under 900 kr.",900,±2 mm @ 30 m; IP54; pris < 900 kr,sv-SE
+INT10,El & säkerhet,"Grenuttag med petskydd och överspänningsskydd, CE, under 250 kr.",250,petskydd; överspänningsskydd; CE/SELV; pris < 250 kr,sv-SE
+INT11,Utomhusrengöring,Högtryckstvätt runt 130 bar med metallpump och 8 m slang under 2 000 kr.,2000,~130 bar; metallpump; 8 m slang; pris < 2000 kr,sv-SE
+INT12,Förvaring,"Hyllsystem 180×90×45 cm under 700 kr, ≥175 kg per hylla, verktygslös montering.",700,180×90×45; ≥175 kg/hylla; verktygslös; pris < 700 kr,sv-SE
+INT13,Byggmaterial,"Trall 28×120 mm tryckimpregnerad under 35 kr/m, leveransinfo enligt PDP.",35,28×120 mm; tryckimpregnerad; pris < 35 kr/m; leveransinfo enl. PDP,sv-SE
+INT14,Byggmaterial,"Isolering glasull 95 mm, λ ≤ 0,037, brandklass A1, pris per m².",0,"95 mm; λ ≤ 0,037; A1; pris/m²",sv-SE
+INT15,Dörrar,"Innerdörr 80×200 cm, ljudklass 30 dB under 1 200 kr.",1200,80×200 cm; Rw 30 dB; pris < 1200 kr,sv-SE
+INT16,Träskivor,Spånskiva golv 22 mm P5 not‑spont under 160 kr per skiva.,160,22 mm P5; not‑spont; pris/skiva < 160 kr,sv-SE
+INT17,Elverktyg,"Borrskruvdragare 18 V, borstlös, 13 mm chuck under 1 500 kr, 3 års garanti.",1500,18 V; borstlös; 13 mm chuck; 3 års garanti; pris < 1500 kr,sv-SE
+INT18,Elverktyg,Multiverktyg med snabbfäste och tillbehörssats under 1 200 kr.,1200,snabbfäste; tillbehörssats; pris < 1200 kr,sv-SE
+INT19,Arbetskläder,"Arbetsbyxa med knäskyddsfickor, EN ISO 13688 under 900 kr.",900,knäskyddsfickor; EN ISO 13688; pris < 900 kr,sv-SE
+INT20,Skyddsskor,Skyddsskor S3 SRC strl 42 under 900 kr.,900,S3; SRC; storlek 42; pris < 900 kr,sv-SE
+INT21,Bilservice,Boka däckbyte nära [POSTNR]: visa från‑pris och avbokningspolicy.,0,bokningslänk; från‑pris; avbokningspolicy; nära [POSTNR],sv-SE
+INT22,Bilreservdelar,Startbatteri till [REGNR] (AGM/EFB rätt storlek) med inbytes-/returinfo.,0,kompatibilitet [REGNR]; AGM/EFB; inbytes-/returinfo,sv-SE
+INT23,Biltillbehör,Vindrutetorkare till [REGNR] med möjlighet till montering i butik.,0,kompatibilitet [REGNR]; montering i butik,sv-SE
+INT24,Skönhet,"Sulfat- & silikonfritt schampo för känslig hårbotten under 200 kr, INCI listad.",200,sulfatfri; silikonfri; känslig hårbotten; INCI listad; pris < 200 kr,sv-SE
+INT25,Hårvård,Hårfön med jonfunktion och minst 2 års garanti under 800 kr.,800,jonfunktion; ≥2 års garanti; pris < 800 kr,sv-SE
+INT26,Marketplace,"Lista topp‑säljare för EAN [EAN] på CDON med betyg, leveransinfo och returpolicy.",0,EAN-baserad; säljarranking; betyg; leveransinfo; returpolicy,sv-SE

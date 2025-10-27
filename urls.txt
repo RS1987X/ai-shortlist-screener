@@ -1,0 +1,3 @@
+https://example.com/p/example-product
+https://example.com/services/example-service
+https://example.com/series/example-family
