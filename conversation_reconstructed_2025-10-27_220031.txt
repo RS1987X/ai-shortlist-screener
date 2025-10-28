@@ -1,0 +1,151 @@
+Conversation Transcript (Reconstructed) — AI Shortlist Readiness (ASR) & LAR Project
+Generated: 2025-10-27T22:00:31
+
+Note: This is a faithful reconstruction of our discussion with expanded detail so it’s useful as a document.
+It captures the topics, examples, formulas, file links, and decisions we covered (not verbatim chat logs).
+
+
+1) Brand Premium in the AI Economy — Hypothesis & Rationale
+- Claim: Recognized brands gain a larger premium as AI-driven, agentic search compresses choices into 1–3 picks.
+- Drivers:
+  • Shortlist compression → fewer organic “slots” → higher value for trust signals.
+  • Machine-readability as an eligibility gate: agents must parse, join and justify.
+  • Explainability: policies/warranties/specs let agents defend non-lowest-price choices.
+  • Distribution coherence: fewer conflicts → safer recommendation → room for premium.
+- Counterfactuals (when premium may not rise): poor machine readability, policy ambiguity, high conflict rates, weak service footprint.
+
+
+
+2) Machine Readability — What It Means
+- On-page semantics via JSON-LD (Schema.org), visible in View Source (server-rendered):
+  • Product/Service, Offer (price/currency/availability/url), identifiers (GTIN or brand+MPN + SKU).
+  • Specs with units (additionalProperty or specific schema props).
+  • Policies in schema (MerchantReturnPolicy, WarrantyPromise).
+  • ProductGroup for family pages with hasVariant → child Product URLs.
+- Identity & Stability:
+  • One GTIN/MPN per variant; stable canonical URLs per variant; ProductGroup/family linking.
+  • Conflict control across site/feeds/marketplaces (target <5% conflicts).
+- PDFs: useful as supporting evidence (DataDownload), but mirror the facts in HTML/JSON-LD.
+
+
+
+3) Google Search vs AI Assistants — Why JSON-LD Matters More Now
+- Google-era ranking: links/text/UX; schema helps rich results but is not always a hard prerequisite.
+- AI era: assistants must filter, justify and act → schema often a prerequisite (“eligibility”).
+- Practical differences:
+  • Assistants need typed attributes (with units) to solve constraints.
+  • Joinability requires GTIN/MPN to merge reviews/price/inventory.
+  • Explainability requires structured policies and citations.
+  • Actionability requires Offer/BookAction.
+- Search engines may also use private merchant feeds; generic AIs typically do not.
+
+
+
+4) Real-world Illustrations
+- Retail PDP (example like airfryer): good human copy; missing server-rendered JSON-LD/IDs → weak for agents.
+- Variant-heavy product (e.g., finishes): needs ProductGroup + hasVariant and child Products with IDs/specs/offers.
+- Services (e.g., bilservice): needs Service + Offer (from-price) + BookAction (booking URL) and cancellation policy.
+- Model/series pages (e.g., car model): good marketing; needs ProductGroup + child variants with typed specs to be agent-pickable.
+- Reconciling earlier note: Some pages have excellent human-visible identifiers/specs but lack structured emission → strong “ingredients,” weak “plating,” hence joinability problems for agents.
+
+
+
+5) Beyond Eligibility (E): X/A/D/S Pillars
+- X — Explainability: policy clarity, standards/certifications, manuals/compatibility matrices (structured).
+- A — Share-of-Answer (SoA): actual shortlist/top-3 presence across a balanced intent basket; use cSoA (conditional on eligibility), Top-1, H2H winrate.
+- D — Distribution/Catalog coherence: cross-surface consistency; low conflict rates; strong marketplace presence.
+- S — Service/Policy strength: returns/warranty/repairs/installation; bookability; local service presence.
+- LAR (likelihood of AI recommendation): LAR = 0.30·E + 0.20·X + 0.25·A + 0.15·D + 0.10·S; gate: if E<60 → LAR≤40.
+
+
+
+6) Metrics & Formulas (Investor-facing)
+- SoA@3 (overall): #intents with top-3 / total intents.
+- cSoA@3 (conditional): #top-3 / #eligible intents.
+- Top-1 rate; H2H winrate vs peer median (only count intents where both are eligible).
+- Intent Coverage (IC): #eligible intents / total intents (report separately from placement metrics).
+- LAR-Core (placement-focused): 0.30·E + 0.20·X + 0.35·cSoA + 0.15·H2H (cap if E<60).
+- LAR-Full: 0.30·E + 0.20·X + 0.25·cSoA + 0.15·D + 0.10·S (cap if E<60).
+
+
+
+7) Intent Basket (sv-SE; examples)
+- Elektroniktillbehör: “USB-C-hub med 2× HDMI 4K60 och 100 W PD under 800 kr.”
+- Nätverk: “Mesh-Wi-Fi 3-pack AX3000 med ethernet-backhaul under 2 500 kr.”
+- Skärmar: “24" IPS 75 Hz, höjdjusterbar, VESA under 1 600 kr.”
+- Ström: “Powerbank 20 000 mAh med 30 W USB-C PD under 600 kr.”
+- Köksmaskiner: “Airfryer 5–6 L under 800 kr, diskmaskinsäker korg och PFAS-fri non-stick.”
+- Inomhusklimat: “Luftrenare CADR ≥200 m³/h, HEPA H13 under 2 000 kr.”
+- Belysning, Mätverktyg, El & säkerhet, Utomhusrengöring, Förvaring…
+- Byggmaterial: “Trall 28×120 mm tryckimpregnerad under 35 kr/m, leveransinfo enl. PDP.”
+- Elverktyg & PPE: “Borrskruvdragare 18 V, borstlös, 13 mm chuck under 1 500 kr, 3 års garanti.”
+- Bilservice/Reservdelar/Tillbehör: intents med [POSTNR]/[REGNR].
+- Skönhet/Marketplace (CDON): EAN-baserade seller lists med betyg/leverans/returpolicy.
+(See `data/intents/intents_peer_core_sv.csv` in the project skeleton.)
+
+
+
+8) Machine-Readability Audit — What’s Scored
+- Product score (0–100): server JSON-LD; Product/Service presence; Offer; identifiers (GTIN or brand+MPN); policies; specs-with-units.
+- Family score (0–100): ProductGroup; hasVariant; links to child PDPs; policies; quantitative ranges.
+- Eligibility E = 0.8×Product + 0.2×Family.
+- Explainability X (proxy): policy/spec coverage (later can be replaced by richer features).
+- Output: per-URL flags and scores; aggregate per brand/domain.
+- Tooling: `asr audit urls.txt -> asr_report.csv` (from the project CLI).
+
+
+
+9) Distribution Coherence & Conflict Checks
+- For 10 SKUs per brand, compare PDP vs marketplace vs manual/PDF across:
+  • price, availability, 2 key specs, returns/warranty days.
+- Target conflict rate: <5% of checked fields.
+- Identifier match rate across surfaces: ≥90%.
+- Use outputs to populate D (Distribution) and to spot catalog hygiene issues.
+
+
+
+10) Services & Actionability
+- Service pages should expose `Service` + `Offer` (from-price) and `potentialAction` (`BookAction` with an EntryPoint URL).
+- Local service presence can be expressed via `LocalBusiness` + `makesOffer`.
+- Actionability moves agents from “recommend” to “do,” lifting SoA/Top-1 and premium support.
+
+
+
+11) Identity & Stability — Deep-Dive
+- Identity: one GTIN or brand+MPN per variant; SKU as internal; avoid ID reuse across colors/sizes/packs.
+- Stability: stable canonical URL per variant; family hubs with `hasVariant`; lifecycle handling (discontinued with successor links).
+- Locale stability: use hreflang; keep IDs the same across locales.
+- Auditing: check `rel=canonical`, duplicate URLs with params, and presence of child links on family pages.
+
+
+
+12) Server-Rendered vs JS-only JSON-LD
+- Server-rendered: JSON-LD present in the initial HTML (visible in “View Source”); pass.
+- JS-only: injected after load; many crawlers/agents won’t see it; fail eligibility.
+- Tests: `View Source` search for `application/ld+json` or `curl | grep "@type":"Product"`.
+
+
+
+13) Project Skeleton & CLI (delivered)
+- Package: `asr-screener` with CLI `asr`.
+- Commands:
+  • `asr audit urls.txt --out audit/asr_report.csv`
+  • `asr lar audit/asr_report.csv data/soa_log.csv data/distribution.csv data/service.csv --out audit/lar_scores.csv`
+- Repo structure includes data templates (peers, intents, A/D/S), docs, tests, and CI.
+- Zip provided separately; recommended to develop under WSL home, not /mnt/c.
+
+
+
+14) LAR/ASR as Leading Indicators
+- Expect assistants to influence a growing share of journeys (e.g., 10–20%).
+- cSoA advantage of 10–20 pp can translate to mid-single-digit revenue lifts and 1–2 pts margin mix over 2–4 quarters, via higher organic exposure and lower CAC/returns.
+- Track quarterly; tie movements to catalog/policy fixes.
+
+
+
+15) Practical Next Steps
+- Finalize the Swedish intent basket and peers.
+- Sample 20 PDPs + 3 family pages per peer; run audit; compute E and X proxies.
+- Log SoA across assistants for the intents; compute cSoA/Top-1/H2H.
+- Populate D (conflicts/identifier match), S (returns/warranty/repairs) → compute LAR Full.
+- Produce a quarterly scoreboard and trend lines.
