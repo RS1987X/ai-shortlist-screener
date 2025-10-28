@@ -1,9 +1,9 @@
 intent_id,category,prompt,budget,constraints,locale
-INT01,Elektroniktillbehör,USB-C-hub med 2× HDMI 4K60 och 100 W PD under 800 kr.,800,2×HDMI 4K60; 100W PD; USB-C; pris < 800 kr,sv-SE
+INT01,Elektroniktillbehör,USB-C hub HDMI 4K och 100 W PD under 800 kr.,800,HDMI 4K; 100W PD; USB-C; pris < 800 kr,sv-SE
 INT02,Nätverk,Mesh‑Wi‑Fi 3‑pack AX3000 med ethernet‑backhaul under 2 500 kr.,2500,AX3000; 3-pack; ethernet-backhaul; pris < 2500 kr,sv-SE
 INT03,Skärmar,"24"" IPS-skärm 75 Hz, höjdjusterbar, VESA under 1 600 kr.",1600,24 tum; IPS; 75 Hz; höjdjusterbar; VESA; pris < 1600 kr,sv-SE
 INT04,Ström,Powerbank 20 000 mAh med 30 W USB‑C PD under 600 kr.,600,20000 mAh; 30W USB-C PD; flygsäker; pris < 600 kr,sv-SE
-INT05,Dokning,USB‑C‑docka med LAN och 2×DisplayPort som stödjer två 4K‑skärmar under 1 800 kr.,1800,LAN; 2×DP; dual 4K; pris < 1800 kr,sv-SE
+INT05,Dokning,USB‑C‑docka med LAN och DisplayPort som stödjer två 4K‑skärmar under 1 800 kr.,1800,LAN; DP; dual 4K; pris < 1800 kr,sv-SE
 INT06,Köksmaskiner,"Airfryer 5–6 L under 800 kr, diskmaskinsäker korg och non‑stick utan PFAS enligt PDP.",800,5–6 L; diskmaskinsäker korg; non‑stick utan PFAS enl. PDP; pris < 800 kr,sv-SE
 INT07,Inomhusklimat,"Luftrenare CADR ≥ 200 m³/h, HEPA H13 under 2 000 kr.",2000,CADR ≥ 200 m³/h; HEPA H13; pris < 2000 kr,sv-SE
 INT08,Belysning,"Arbetsbelysning ≥ 2 000 lm, IP65, 230 V under 600 kr.",600,≥2000 lm; IP65; 230 V; pris < 600 kr,sv-SE

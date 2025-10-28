@@ -42,11 +42,28 @@ class URLDiscoverer:
         Returns:
             Search query string (without brand names to avoid bias)
         """
-        # Use category as base
-        category = intent.get("category", "")
+        # Extract product type from prompt (first few words before specs/price)
+        prompt = intent.get("prompt", "")
+        
+        # Remove price constraints and quantities from prompt
+        prompt_clean = re.sub(r"under\s+\d+[\s,]?\d*\s*kr.*", "", prompt, flags=re.IGNORECASE)
+        prompt_clean = re.sub(r'\d+[×x]', '', prompt_clean)  # Remove quantity prefixes like "2×"
+        prompt_clean = re.sub(r'\d+K\d+', lambda m: m.group()[:2] + 'K', prompt_clean)  # 4K60 -> 4K
+        prompt_clean = re.sub(r'\s+', ' ', prompt_clean).strip()  # Normalize spaces
+        
+        # Take first 2-3 words from prompt as product type, remove Swedish stop words
+        swedish_stopwords = {'med', 'och', 'för', 'till', 'som', 'i', 'på', 'av', 'från', 'W'}
+        product_words = [w for w in prompt_clean.split()[:6] if w.lower() not in swedish_stopwords][:3]
+        product_type = " ".join(product_words).strip()
+        
+        # Normalize hyphens between words (USB-C-hub -> USB-C hub)
+        product_type = re.sub(r'-(\w+hub|station|docka)', r' \1', product_type, flags=re.IGNORECASE)
         
         # Extract key specs from constraints (remove price, brand references)
         constraints = intent.get("constraints", "")
+        
+        # Remove quantity prefixes and noise from constraints
+        clean_constraints = re.sub(r'\d+[×x]', '', constraints)  # Remove "2×" from "2×HDMI"
         
         # Remove common noise words
         noise_patterns = [
@@ -54,26 +71,42 @@ class URLDiscoverer:
             r"under\s+\d+\s*kr",
             r"enl\.\s*PDP",
             r"enligt\s+PDP",
+            r"flygsäker",  # feature flags without specs
         ]
         
-        clean_constraints = constraints
         for pattern in noise_patterns:
             clean_constraints = re.sub(pattern, "", clean_constraints, flags=re.IGNORECASE)
         
-        # Extract technical specs (alphanumeric + units)
-        spec_patterns = [
-            r"\d+[×x]\d+",  # dimensions like 180×90
-            r"\d+\s*(?:mm|cm|m|L|W|V|Hz|bar|kg|GB|TB|mAh|dB)",  # measurements
-            r"[A-Z]{2,}[-\d]*",  # standards like IP65, ISO, HDMI
-            r"\d+[KkMm]?\s*(?:bit|DPI)",  # tech specs
-        ]
+        # Extract technical specs with normalization and deduplication
+        spec_list = []
+        seen_upper = set()
         
-        specs = []
-        for pattern in spec_patterns:
-            specs.extend(re.findall(pattern, clean_constraints))
+        # 1. Resolution specs (4K60 -> 4K, 1080p60 -> 1080p)
+        resolutions = re.findall(r'\d+K\d*', clean_constraints, flags=re.IGNORECASE)
+        for res in resolutions:
+            normalized = re.sub(r'(\d+K)\d*', r'\1', res, flags=re.IGNORECASE).upper()
+            if normalized not in seen_upper:
+                spec_list.append(normalized)
+                seen_upper.add(normalized)
         
-        # Combine category + key specs
-        query_parts = [category] + specs[:4]  # Limit to top 4 specs
+        # 2. Power/capacity specs (100W, 20000mAh, etc.)
+        power_specs = re.findall(r'\d+\s*(?:W|mAh|V|Hz|bar|kg|GB|TB|dB|lm)\b', clean_constraints, flags=re.IGNORECASE)
+        for spec in power_specs:
+            spec_clean = spec.replace(' ', '').upper()
+            if spec_clean not in seen_upper:
+                spec_list.append(spec_clean)
+                seen_upper.add(spec_clean)
+        
+        # 3. Standards (HDMI, USB-C, PD, IP65, etc.) - only unique ones
+        standards = re.findall(r'\b(?:HDMI|USB-C|USB|PD|IP\d+|AX\d+|S\d+|IPS|HEPA|CE)\b', clean_constraints, flags=re.IGNORECASE)
+        for std in standards:
+            std_upper = std.upper()
+            if std_upper not in seen_upper:
+                spec_list.append(std)
+                seen_upper.add(std_upper)
+        
+        # Combine product type + key specs (limit to avoid over-specification)
+        query_parts = [product_type] + spec_list[:5]
         return " ".join(query_parts).strip()
     
     def build_site_query(self, domain: str, search_terms: str) -> str:
@@ -266,7 +299,10 @@ class URLDiscoverer:
             
             # Filter out non-product pages
             parsed = urlparse(url)
-            if parsed.netloc != peer_domain:
+            # Check domain match (handle www. prefix)
+            result_domain = parsed.netloc.replace('www.', '')
+            expected_domain = peer_domain.replace('www.', '')
+            if result_domain != expected_domain:
                 continue  # Skip if wrong domain
             
             score = self.score_url_relevance(url, intent, result)

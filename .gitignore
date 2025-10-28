@@ -47,3 +47,8 @@ Thumbs.db
 
 # Windows ADS metadata (from downloaded files)
 *:Zone.Identifier
+
+# Test files and discovery outputs
+data/test_*.csv
+data/*_test.csv
+data/audit_urls*.csv
