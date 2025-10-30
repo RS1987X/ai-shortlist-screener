@@ -292,6 +292,8 @@ class SitemapSearcher:
         category_term = search_terms[0] if search_terms else None
         spec_terms = [t for t in search_terms if re.search(r'\d+', t)]  # Terms with numbers
         descriptive_terms = [t for t in search_terms[1:] if not re.search(r'\d+', t)]  # Words without numbers
+        # Any term without digits is considered a non-numeric anchor (e.g., category, standards like usb-c/hdmi)
+        non_numeric_terms = [t for t in search_terms if not re.search(r'\d+', t)]
         
         # Get all product URLs (limit to first 5 sitemaps for speed during development)
         all_urls = self.get_all_product_urls(domain, limit=5)
@@ -306,6 +308,13 @@ class SitemapSearcher:
         for url in all_urls:
             score, details = self.score_url(url, search_terms)
             if score > 0:
+                # Guardrail: require at least one non-numeric term match (to avoid numeric-only false positives
+                # like lengths such as 32mm/30m matching unrelated products like pool hoses)
+                has_non_numeric_match = any(t in details['matched_terms'] for t in non_numeric_terms)
+                if not has_non_numeric_match:
+                    # Skip numeric-only matches
+                    continue
+
                 result = {
                     'url': url,
                     'score': score,
@@ -313,12 +322,12 @@ class SitemapSearcher:
                     'match_count': details['match_count'],
                 }
                 scored_results.append(result)
-                
+
                 # Track category+descriptive matches (no specs) for fallback
                 if category_term and category_term in details['matched_terms']:
                     has_spec_match = any(spec in details['matched_terms'] for spec in spec_terms)
                     has_descriptive_match = any(desc in details['matched_terms'] for desc in descriptive_terms)
-                    
+
                     # Good category match: has category + descriptive terms but no specs
                     if not has_spec_match and has_descriptive_match:
                         category_only_results.append(result)

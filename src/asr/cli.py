@@ -19,7 +19,7 @@ def discover(
     api_key: str = typer.Option(None, envvar="GOOGLE_API_KEY", help="Google Custom Search API key"),
     search_engine_id: str = typer.Option(None, envvar="GOOGLE_SEARCH_ENGINE_ID", help="Google Custom Search Engine ID"),
     use_sitemap: bool = typer.Option(True, help="Try sitemap search first (respects robots.txt)"),
-    use_api: bool = typer.Option(True, help="Use Google API as fallback if sitemap fails"),
+    use_api: bool = typer.Option(False, help="Use Google API as fallback if sitemap fails"),
     limit: int = typer.Option(10, "--limit", "-n", help="Limit number of searches (default: 10 for development)")
 ):
     """
@@ -117,7 +117,37 @@ def discover_playwright(
 
 @app.command()
 def audit(urls_file: str, out: str = "asr_report.csv", follow_children: int = 0):
-    urls = Path(urls_file).read_text(encoding="utf-8").splitlines()
+    """
+    Audit product URLs to extract structured data.
+    
+    Accepts either:
+    - Plain text file (one URL per line)
+    - CSV file with 'url' column (from discover command)
+    
+    Example:
+      asr audit data/audit_urls.csv
+      asr audit urls.txt
+    """
+    import csv
+    
+    urls = []
+    file_content = Path(urls_file).read_text(encoding="utf-8")
+    
+    # Check if it's a CSV (has header with 'url' column)
+    if 'intent_id,brand,domain,url' in file_content or 'url,' in file_content[:200]:
+        # It's a CSV, extract URLs from 'url' column
+        with open(urls_file, encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                url = row.get('url', '').strip()
+                if url and url.startswith('http'):  # Valid URL
+                    urls.append(url)
+        typer.echo(f"Found {len(urls)} URLs in CSV")
+    else:
+        # Plain text file
+        urls = file_content.splitlines()
+        urls = [u.strip() for u in urls if u.strip()]
+    
     Path(out).parent.mkdir(parents=True, exist_ok=True)
     audit_urls(urls, out)
     typer.echo(f"Wrote audit to {out}")
