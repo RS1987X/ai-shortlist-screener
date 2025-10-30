@@ -1,3 +1,8 @@
-https://example.com/p/example-product
-https://example.com/services/example-service
-https://example.com/series/example-family
+https://www.elgiganten.se/product/datorer-kontor/datortillbehor/dockningsstation-till-laptop/belkin-usb-c-6-i-1-adapter/286349
+https://www.netonnet.se/art/dator-surfplatta/datortillbehor/usb-hub/belkin-multiport-hub-usb-c-6-in-1-med-100w-pd-laddningsport/1018141.14397/
+https://www.kjell.com/se/produkter/dator/kablar-adaptrar/usb/usb-c/usb-c-dockningsstation/plexgear-9-portars-usb-c-multiadapter-cb1022-p65980
+https://www.elgiganten.se/product/datorer-kontor/skarmar-tillbehor/datorskarm/samsung-t35f-24-bildskarm/226141
+https://www.netonnet.se/art/dator-surfplatta/datorskarmar/datorskarmar-31-tum-storre
+https://www.kjell.com/se/produkter/dator/datorskarmar/kontorsskarmar
+https://www.elgiganten.se/product/mobiler-tablets-smartklockor/mobiltillbehor/powerbank/champion-powerbank-20000-mah-30w-pd/421652
+https://www.kjell.com/se/produkter/mobilt/powerbank

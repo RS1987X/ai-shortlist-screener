@@ -1,0 +1,599 @@
+{
+  "https://www.elgiganten.se/product/datorer-kontor/datortillbehor/dockningsstation-till-laptop/belkin-usb-c-6-i-1-adapter/286349": [
+    {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "@id": "/product/datorer-kontor/datortillbehor/dockningsstation-till-laptop/belkin-usb-c-6-i-1-adapter/286349#Product",
+      "name": "Belkin USB-C 6-i-1 adapter",
+      "image": "https://next-media.elkjop.com/image/dv_web_D180001002730808/286349/belkin-usb-c-6-i-1-adapter.jpg",
+      "description": "Belkin USB-C 6-i-1 adapter ger dig en rad anslutningsmöjligheter för din tunna bärbara dator. Koppla in den via din USB C-port och njut av 4K videos genom HDMI-porten eller använd 100 W strömförsörjning genom USB-C-porte",
+      "url": "https://www.elgiganten.se/product/datorer-kontor/datortillbehor/dockningsstation-till-laptop/belkin-usb-c-6-i-1-adapter/286349",
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.6",
+        "reviewCount": 27,
+        "@id": "/product/datorer-kontor/datortillbehor/dockningsstation-till-laptop/belkin-usb-c-6-i-1-adapter/286349#AggregateRating"
+      },
+      "gtin": "745883819829",
+      "mpn": "AVC008btSGY",
+      "itemCondition": "https://schema.org/NewCondition",
+      "sku": "286349",
+      "brand": {
+        "@type": "Brand",
+        "name": "Belkin",
+        "url": "https://www.elgiganten.se/brand/belkin"
+      },
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "Standard Price",
+          "price": "859",
+          "priceCurrency": "SEK",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/NewCondition",
+          "url": "https://www.elgiganten.se/product/datorer-kontor/datortillbehor/dockningsstation-till-laptop/belkin-usb-c-6-i-1-adapter/286349"
+        },
+        {
+          "@type": "Offer",
+          "name": "Business Price (Excl. VAT)",
+          "price": "687.2",
+          "priceCurrency": "SEK",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/NewCondition",
+          "url": "https://www.elgiganten.se/product/datorer-kontor/datortillbehor/dockningsstation-till-laptop/belkin-usb-c-6-i-1-adapter/286349",
+          "priceSpecification": {
+            "@type": "UnitPriceSpecification",
+            "price": "687.2",
+            "priceCurrency": "SEK",
+            "valueAddedTaxIncluded": false,
+            "name": "Business price (excl. VAT)"
+          }
+        }
+      ]
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Datorer & Kontor",
+          "item": "https://www.elgiganten.se/datorer-kontor"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Datortillbehör",
+          "item": "https://www.elgiganten.se/datorer-kontor/datortillbehor"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "Dockningsstation till Laptop",
+          "item": "https://www.elgiganten.se/datorer-kontor/datortillbehor/dockningsstation-till-laptop"
+        }
+      ]
+    },
+    {
+      "@context": "https://schema.org/",
+      "@type": "Product",
+      "@id": "/product/datorer-kontor/datortillbehor/dockningsstation-till-laptop/belkin-usb-c-6-i-1-adapter/286349#Product",
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "bestRating": "5",
+        "worstRating": "1",
+        "ratingValue": "4.6",
+        "reviewCount": "27",
+        "@id": "/product/datorer-kontor/datortillbehor/dockningsstation-till-laptop/belkin-usb-c-6-i-1-adapter/286349#AggregateRating"
+      },
+      "review": [
+        {
+          "@context": "https://schema.org/",
+          "@type": "Review",
+          "author": {
+            "@type": "Person",
+            "name": "Trusted Customer"
+          },
+          "reviewRating": {
+            "@type": "Rating",
+            "bestRating": "5",
+            "ratingValue": "4",
+            "worstRating": "1"
+          },
+          "reviewBody": "Kompakti ja riittavasti sisääntuloja. Soveltuu matkalle mukaan otettavaksi.",
+          "datePublished": "2025-09-23T15:30:58.336Z",
+          "publisher": {
+            "@type": "Organization",
+            "name": "Feefo"
+          }
+        },
+        {
+          "@context": "https://schema.org/",
+          "@type": "Review",
+          "author": {
+            "@type": "Person",
+            "name": "Trusted Customer"
+          },
+          "reviewRating": {
+            "@type": "Rating",
+            "bestRating": "5",
+            "ratingValue": "5",
+            "worstRating": "1"
+          },
+          "reviewBody": "Funker utmerket og nøyaktig som forventet. Fungerer på både Macbook, Windows og Android, som leder til at man får ekstreme mengder med fleksibilitet. Ethernet kontakten gjør at udugelige internett signaler ikke lenger er noe problem, og nå som \"ingen\" moderne enheter har faktiske USB-A kontakter er den helt genial å bruke. Så hvis du er feks student som må jobbe med litt eldre enheter, kjøp denne!",
+          "datePublished": "2025-09-07T15:00:59.975Z",
+          "publisher": {
+            "@type": "Organization",
+            "name": "Feefo"
+          }
+        },
+        {
+          "@context": "https://schema.org/",
+          "@type": "Review",
+          "author": {
+            "@type": "Person",
+            "name": "Trusted Customer"
+          },
+          "reviewRating": {
+            "@type": "Rating",
+            "bestRating": "5",
+            "ratingValue": "4",
+            "worstRating": "1"
+          },
+          "reviewBody": "Just what I expected. \nLight and fairly small.\nDoes the job",
+          "datePublished": "2025-02-28T09:49:21.996Z",
+          "publisher": {
+            "@type": "Organization",
+            "name": "Feefo"
+          }
+        },
+        {
+          "@context": "https://schema.org/",
+          "@type": "Review",
+          "author": {
+            "@type": "Person",
+            "name": "Trusted Customer"
+          },
+          "reviewRating": {
+            "@type": "Rating",
+            "bestRating": "5",
+            "ratingValue": "5",
+            "worstRating": "1"
+          },
+          "reviewBody": "Akkurat hva trengs når nyere laptop har mindre antall port på dem.",
+          "datePublished": "2025-01-18T00:00:00.000Z",
+          "publisher": {
+            "@type": "Organization",
+            "name": "Feefo"
+          }
+        },
+        {
+          "@context": "https://schema.org/",
+          "@type": "Review",
+          "author": {
+            "@type": "Person",
+            "name": "Trusted Customer"
+          },
+          "reviewRating": {
+            "@type": "Rating",
+            "bestRating": "5",
+            "ratingValue": "5",
+            "worstRating": "1"
+          },
+          "reviewBody": "FOORNØGD MED AT DEN HAR PLASS TIL ULIKE EINHETER, IKKJE MINST AT EG KAN HA MINNEBRIKKER I DEN.",
+          "datePublished": "2024-11-24T00:00:00.000Z",
+          "publisher": {
+            "@type": "Organization",
+            "name": "Feefo"
+          }
+        }
+      ],
+      "description": "Belkin USB-C 6-i-1 adapter",
+      "name": "Belkin USB-C 6-i-1 adapter"
+    }
+  ],
+  "https://www.netonnet.se/art/dator-surfplatta/datortillbehor/usb-hub/belkin-multiport-hub-usb-c-6-in-1-med-100w-pd-laddningsport/1018141.14397/": [],
+  "https://www.kjell.com/se/produkter/dator/kablar-adaptrar/usb/usb-c/usb-c-dockningsstation/plexgear-9-portars-usb-c-multiadapter-cb1022-p65980": [
+    {
+      "name": "Plexgear 9-portars USB-C multiadapter CB1022",
+      "description": "En mångsidig 9-portars adapter för att ansluta kringutrustning till din laptop, såsom en 4K-skärm, tangentbord, nätverkskabel, minneskort och headset med mikrofon via en enda USB-C-port. Adapterns USB-C-port fungerar även som en laddningsport om din laptop endast har en ledig USB-C-port.",
+      "image": "https://https://www.kjell.com/globalassets/productimages/898865_65980_01_inspiration_00.jpg?ref=1581C52BDA",
+      "sku": "65980",
+      "brand": {
+        "@type": "Thing",
+        "name": "Plexgear"
+      },
+      "offers": {
+        "@type": "Offer",
+        "url": "/se/produkter/dator/kablar-adaptrar/usb/usb-c/usb-c-dockningsstation/plexgear-9-portars-usb-c-multiadapter-cb1022-p65980",
+        "priceCurrency": "SEK",
+        "price": 489,
+        "itemCondition": "https://schema.org/NewCondition",
+        "availability": "https://schema.org/InStock",
+        "seller": {
+          "@type": "Organization",
+          "name": "Kjell & Company"
+        }
+      },
+      "@context": "http://schema.org/",
+      "@type": "Product"
+    },
+    {
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "item": {
+            "@id": "https://www.kjell.com/se/produkter/dator/kablar-adaptrar/usb/usb-c/usb-c-dockningsstation/plexgear-9-portars-usb-c-multiadapter-cb1022-p65980",
+            "name": "Dator"
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "item": {
+            "@id": "https://www.kjell.com/se/produkter/dator/kablar-adaptrar/usb/usb-c/usb-c-dockningsstation/plexgear-9-portars-usb-c-multiadapter-cb1022-p65980",
+            "name": "Kablar & adaptrar"
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "item": {
+            "@id": "https://www.kjell.com/se/produkter/dator/kablar-adaptrar/usb/usb-c/usb-c-dockningsstation/plexgear-9-portars-usb-c-multiadapter-cb1022-p65980",
+            "name": "USB"
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 4,
+          "item": {
+            "@id": "https://www.kjell.com/se/produkter/dator/kablar-adaptrar/usb/usb-c/usb-c-dockningsstation/plexgear-9-portars-usb-c-multiadapter-cb1022-p65980",
+            "name": "USB-C"
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 5,
+          "item": {
+            "@id": "https://www.kjell.com/se/produkter/dator/kablar-adaptrar/usb/usb-c/usb-c-dockningsstation/plexgear-9-portars-usb-c-multiadapter-cb1022-p65980",
+            "name": "USB-C dockningsstation"
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 6,
+          "item": {
+            "@id": "https://www.kjell.com/se/produkter/dator/kablar-adaptrar/usb/usb-c/usb-c-dockningsstation/plexgear-9-portars-usb-c-multiadapter-cb1022-p65980",
+            "name": "Plexgear 9-portars USB-C multiadapter CB1022 "
+          }
+        }
+      ],
+      "@context": "http://schema.org/",
+      "@type": "BreadcrumbList"
+    }
+  ],
+  "https://www.elgiganten.se/product/datorer-kontor/skarmar-tillbehor/datorskarm/samsung-t35f-24-bildskarm/226141": [
+    {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "@id": "/product/datorer-kontor/skarmar-tillbehor/datorskarm/samsung-t35f-24-bildskarm/226141#Product",
+      "name": "Samsung T35F 24\" bildskärm",
+      "image": "https://next-media.elkjop.com/image/dv_web_D180001002629779/226141/samsung-t35f-24-bildskarm.jpg",
+      "description": "Samsung T35F 24\" bildskärm ger ditt en pålitlig visuell upplevelse i en snygg, ramlös design. Den har skarp Full HD-upplösning med en uppdateringsfrekvens på 75 Hz, 5 ms responstid och AMD FreeSync-teknologi, vilket ger dig en följsam upplevelse.",
+      "url": "https://www.elgiganten.se/product/datorer-kontor/skarmar-tillbehor/datorskarm/samsung-t35f-24-bildskarm/226141",
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.5",
+        "reviewCount": 264,
+        "@id": "/product/datorer-kontor/skarmar-tillbehor/datorskarm/samsung-t35f-24-bildskarm/226141#AggregateRating"
+      },
+      "gtin": "8806090666742",
+      "mpn": "LF24T350FHRXEN",
+      "itemCondition": "https://schema.org/NewCondition",
+      "sku": "226141",
+      "brand": {
+        "@type": "Brand",
+        "name": "Samsung",
+        "url": "https://www.elgiganten.se/brand/samsung"
+      },
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "Standard Price",
+          "price": "1446",
+          "priceCurrency": "SEK",
+          "availability": "https://schema.org/Discontinued",
+          "itemCondition": "https://schema.org/NewCondition",
+          "url": "https://www.elgiganten.se/product/datorer-kontor/skarmar-tillbehor/datorskarm/samsung-t35f-24-bildskarm/226141"
+        },
+        {
+          "@type": "Offer",
+          "name": "Business Price (Excl. VAT)",
+          "price": "1156.8",
+          "priceCurrency": "SEK",
+          "availability": "https://schema.org/Discontinued",
+          "itemCondition": "https://schema.org/NewCondition",
+          "url": "https://www.elgiganten.se/product/datorer-kontor/skarmar-tillbehor/datorskarm/samsung-t35f-24-bildskarm/226141",
+          "priceSpecification": {
+            "@type": "UnitPriceSpecification",
+            "price": "1156.8",
+            "priceCurrency": "SEK",
+            "valueAddedTaxIncluded": false,
+            "name": "Business price (excl. VAT)"
+          }
+        }
+      ]
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Datorer & Kontor",
+          "item": "https://www.elgiganten.se/datorer-kontor"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Skärmar & Tillbehör",
+          "item": "https://www.elgiganten.se/datorer-kontor/skarmar-tillbehor"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "Datorskärm",
+          "item": "https://www.elgiganten.se/datorer-kontor/skarmar-tillbehor/datorskarm"
+        }
+      ]
+    },
+    {
+      "@context": "https://schema.org/",
+      "@type": "Product",
+      "@id": "/product/datorer-kontor/skarmar-tillbehor/datorskarm/samsung-t35f-24-bildskarm/226141#Product",
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "bestRating": "5",
+        "worstRating": "1",
+        "ratingValue": "4.5",
+        "reviewCount": "264",
+        "@id": "/product/datorer-kontor/skarmar-tillbehor/datorskarm/samsung-t35f-24-bildskarm/226141#AggregateRating"
+      },
+      "review": [
+        {
+          "@context": "https://schema.org/",
+          "@type": "Review",
+          "author": {
+            "@type": "Person",
+            "name": "Trusted Customer"
+          },
+          "reviewRating": {
+            "@type": "Rating",
+            "bestRating": "5",
+            "ratingValue": "4",
+            "worstRating": "1"
+          },
+          "reviewBody": "Vi bruker TVn mest til Streaming. Enkelt oppsett rett ut av eska. Krystallklart bilde. Vi har lydplanke, så de interne høytalerne er ikke prøvd. For å opptimalisere bilde helt, må man ut med flere tusen kr, og d synes jeg er drøyt, uansett unnskyldning. Vi er fornøyd med Tvn.",
+          "datePublished": "2022-12-26T00:00:00.000Z",
+          "publisher": {
+            "@type": "Organization",
+            "name": "Feefo"
+          }
+        },
+        {
+          "@context": "https://schema.org/",
+          "@type": "Review",
+          "author": {
+            "@type": "Person",
+            "name": "Trusted Customer"
+          },
+          "reviewRating": {
+            "@type": "Rating",
+            "bestRating": "5",
+            "ratingValue": "5",
+            "worstRating": "1"
+          },
+          "reviewBody": "Anbfaler den til nye gamers som har ikke mye penger",
+          "datePublished": "2022-12-07T00:00:00.000Z",
+          "publisher": {
+            "@type": "Organization",
+            "name": "Feefo"
+          }
+        },
+        {
+          "@context": "https://schema.org/",
+          "@type": "Review",
+          "author": {
+            "@type": "Person",
+            "name": "Trusted Customer"
+          },
+          "reviewRating": {
+            "@type": "Rating",
+            "bestRating": "5",
+            "ratingValue": "5",
+            "worstRating": "1"
+          },
+          "reviewBody": "Har nettopp tatt den i bruk. Ser ut til å være helt etter mitt behov.",
+          "datePublished": "2022-10-27T00:00:00.000Z",
+          "publisher": {
+            "@type": "Organization",
+            "name": "Feefo"
+          }
+        },
+        {
+          "@context": "https://schema.org/",
+          "@type": "Review",
+          "author": {
+            "@type": "Person",
+            "name": "Trusted Customer"
+          },
+          "reviewRating": {
+            "@type": "Rating",
+            "bestRating": "5",
+            "ratingValue": "5",
+            "worstRating": "1"
+          },
+          "reviewBody": "Kjempe fornøyd med produkt. Er so gla for at eg bestilte hos dåkke ❤️❤️❤️",
+          "datePublished": "2022-10-19T00:00:00.000Z",
+          "publisher": {
+            "@type": "Organization",
+            "name": "Feefo"
+          }
+        },
+        {
+          "@context": "https://schema.org/",
+          "@type": "Review",
+          "author": {
+            "@type": "Person",
+            "name": "Trusted Customer"
+          },
+          "reviewRating": {
+            "@type": "Rating",
+            "bestRating": "5",
+            "ratingValue": "5",
+            "worstRating": "1"
+          },
+          "reviewBody": "Kjøpte denne forrige uke og den kom på 2dager i posten så fort bestilling! Den funker bra, ingen pixler i skjermen mista den med et uhell i gulvet når jeg skulle sette den sammen og ingenting ble ødelagt og da er det en bra skjerm skal jeg si deg! Funker fett og har bra holdning!",
+          "datePublished": "2022-09-27T00:00:00.000Z",
+          "publisher": {
+            "@type": "Organization",
+            "name": "Feefo"
+          }
+        }
+      ],
+      "description": "Samsung T35F 24 bildskärm",
+      "name": "Samsung T35F 24 bildskärm"
+    }
+  ],
+  "https://www.netonnet.se/art/dator-surfplatta/datorskarmar/datorskarmar-31-tum-storre": [],
+  "https://www.kjell.com/se/produkter/dator/datorskarmar/kontorsskarmar": [
+    {
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "item": {
+            "@id": "https://www.kjell.com/se/produkter/dator/datorskarmar/kontorsskarmar",
+            "name": "Dator"
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "item": {
+            "@id": "https://www.kjell.com/se/produkter/dator/datorskarmar/kontorsskarmar",
+            "name": "Datorskärmar"
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "item": {
+            "@id": "https://www.kjell.com/se/produkter/dator/datorskarmar/kontorsskarmar",
+            "name": "Kontorsskärmar"
+          }
+        }
+      ],
+      "@context": "http://schema.org/",
+      "@type": "BreadcrumbList"
+    }
+  ],
+  "https://www.elgiganten.se/product/mobiler-tablets-smartklockor/mobiltillbehor/powerbank/champion-powerbank-20000-mah-30w-pd/421652": [
+    {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "@id": "https://www.elgiganten.se/product/mobiler-tablets-smartklockor/mobiltillbehor/powerbank/champion-powerbank-20000-mah-30w-pd/421652",
+      "name": "Champion PowerBank 20000 mAh 30W PD",
+      "image": "https://next-media.elkjop.com/image/dv_web_D1800010021092687/421652/champion-powerbank-20000-mah-30w-pd.jpg",
+      "description": "Champions PowerBank 20 000 mAh med Power Delivery och Quick charge (QC) laddar din enhet snabbt tack vare Fast Charge 30W.",
+      "url": "https://www.elgiganten.se/product/mobiler-tablets-smartklockor/mobiltillbehor/powerbank/champion-powerbank-20000-mah-30w-pd/421652",
+      "gtin": "7391091861100",
+      "mpn": "60141110",
+      "itemCondition": "https://schema.org/NewCondition",
+      "sku": "421652",
+      "brand": {
+        "@type": "Brand",
+        "name": "Champion",
+        "url": "https://www.elgiganten.se/brand/champion"
+      },
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "Standard Price",
+          "price": "393",
+          "priceCurrency": "SEK",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/NewCondition",
+          "url": "https://www.elgiganten.se/product/mobiler-tablets-smartklockor/mobiltillbehor/powerbank/champion-powerbank-20000-mah-30w-pd/421652"
+        },
+        {
+          "@type": "Offer",
+          "name": "Business Price (Excl. VAT)",
+          "price": "314.4",
+          "priceCurrency": "SEK",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/NewCondition",
+          "url": "https://www.elgiganten.se/product/mobiler-tablets-smartklockor/mobiltillbehor/powerbank/champion-powerbank-20000-mah-30w-pd/421652",
+          "priceSpecification": {
+            "@type": "UnitPriceSpecification",
+            "price": "314.4",
+            "priceCurrency": "SEK",
+            "valueAddedTaxIncluded": false,
+            "name": "Business price (excl. VAT)"
+          }
+        }
+      ]
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Mobiler, Tablets & Smartklockor",
+          "item": "https://www.elgiganten.se/mobiler-tablets-smartklockor"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Mobiltillbehör",
+          "item": "https://www.elgiganten.se/mobiler-tablets-smartklockor/mobiltillbehor"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "Powerbank",
+          "item": "https://www.elgiganten.se/mobiler-tablets-smartklockor/mobiltillbehor/powerbank"
+        }
+      ]
+    }
+  ],
+  "https://www.kjell.com/se/produkter/mobilt/powerbank": [
+    {
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "item": {
+            "@id": "https://www.kjell.com/se/produkter/mobilt/powerbank",
+            "name": "Mobilt"
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "item": {
+            "@id": "https://www.kjell.com/se/produkter/mobilt/powerbank",
+            "name": "Powerbank"
+          }
+        }
+      ],
+      "@context": "http://schema.org/",
+      "@type": "BreadcrumbList"
+    }
+  ]
+}

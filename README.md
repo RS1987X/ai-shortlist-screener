@@ -3,6 +3,8 @@
 
 A lightweight toolkit to screen peers and estimate AI Shortlist Readiness (ASR) and Likelihood of AI Recommendation (LAR).
 
+> **New to this project?** Read the **[Architecture Overview](docs/architecture.md)** first to understand how the three-stage pipeline (Discover → Audit → LAR) works and where the logic lives.
+
 ## Quickstart
 
 ```bash
@@ -13,15 +15,24 @@ pip install -e .
 
 ### Step 1: Discover Product URLs (Optional but Recommended)
 
-Find product URLs for each intent × peer combination using unbiased site-specific searches:
+Find product URLs for each intent × peer combination using one of two methods:
 
+**Method 1: Sitemap Search (Recommended - Fast & Free)**
 ```bash
-# Requires Google Custom Search API (free tier: 100/day)
-# See docs/url_discovery.md for setup
+# No API key required - searches retailer sitemaps
+asr discover \
+  --intents-csv data/intents/intents_peer_core_sv.csv \
+  --peers-csv data/multibrand_retailer_peers.csv \
+  --out data/audit_urls.csv
+```
+
+**Method 2: Google Custom Search API (Fallback)**
+```bash
+# Requires API key (free tier: 100/day) - see docs/url_discovery.md
 export GOOGLE_API_KEY="your-api-key"
 export GOOGLE_SEARCH_ENGINE_ID="your-cx-id"
 
-asr discover \
+asr discover --use-api \
   --intents-csv data/intents/intents_peer_core_sv.csv \
   --peers-csv data/multibrand_retailer_peers.csv \
   --out data/audit_urls.csv
@@ -29,7 +40,14 @@ asr discover \
 
 **Output**: `data/audit_urls.csv` with URLs for manual review before audit.
 
-**Why this matters**: Using Google to find URLs can introduce bias. This tool uses **site-specific queries** (`site:domain.com terms`) and **re-ranks by spec match** (not Google rank) to minimize bias.
+**Why sitemap search?** 
+- ✅ Free (no API costs)
+- ✅ Fast (5-10 seconds per retailer)
+- ✅ No rate limits
+- ✅ 75% retailer coverage (12/16 have sitemaps)
+- ✅ Falls back to Google API for retailers without sitemaps
+
+**See:** [Sitemap Discovery Guide](docs/sitemap_discovery.md) for details.
 
 ### Step 2: Audit Product Pages
 
@@ -44,12 +62,17 @@ asr audit urls.txt --out audit/asr_report.csv --follow-children 2
 ### Step 3: Compute LAR Scores
 
 ```bash
-# Standard LAR (simple average across all intents)
-asr lar audit/asr_report.csv data/soa_log.csv data/distribution.csv data/service.csv --out audit/lar_scores.csv
+# Standard LAR (S auto-computed from product ratings)
+asr lar audit/asr_report.csv data/soa_log.csv --out audit/lar_scores.csv
+
+# Override S with manual satisfaction scores (e.g., from Trustpilot)
+asr lar audit/asr_report.csv data/soa_log.csv --service-csv data/service.csv --out audit/lar_scores.csv
 
 # Category-weighted LAR (handles peer category imbalance)
-asr lar audit/asr_report.csv data/soa_log.csv data/distribution.csv data/service.csv --out audit/lar_weighted.csv --weighted
+asr lar audit/asr_report.csv data/soa_log.csv --weighted --out audit/lar_weighted.csv
 ```
+
+**Note**: The S (Service Quality) dimension is now **auto-computed** from product ratings found in the audit data. Use `--service-csv` to provide manual overrides when needed (e.g., Trustpilot or Google Reviews scores for retailers without on-site ratings).
 
 ---
 
@@ -67,7 +90,9 @@ When analyzing peers with different category coverage (e.g., some peers compete 
 
 ## Documentation
 
-- **[URL Discovery Guide](docs/url_discovery.md)**: How to find product URLs without bias
+- **[Architecture Overview](docs/architecture.md)** ⭐ **Start here** - How the system works, where logic lives, design decisions
+- **[Sitemap Discovery Guide](docs/sitemap_discovery.md)**: Fast, free URL discovery via sitemaps
+- **[URL Discovery Guide](docs/url_discovery.md)**: Google API method and setup
 - **[Category Weighting](docs/category_weighting.md)**: Fair peer comparisons across categories
 - **[Methodology](docs/methodology.md)**: E·X·A·D·S framework overview
 - **[Scoring](docs/scoring.md)**: Product & family scoring details

@@ -1,7 +1,7 @@
 
 import csv
 from .fetch import fetch_html
-from .parse import extract_jsonld, has_server_rendered_jsonld, classify_schema, product_identifiers, has_units
+from .parse import extract_jsonld, has_server_rendered_jsonld, classify_schema, product_identifiers, has_units, has_policy_links, extract_policy_urls
 from .config import DEFAULT_SCORING
 
 def score_url(url: str) -> dict:
@@ -14,14 +14,133 @@ def score_url(url: str) -> dict:
     has_offer = len(buckets["Offer"]) > 0 or any(p.get("offers") for p in buckets["Product"])
     has_productgroup = len(buckets["ProductGroup"]) > 0
     has_service = len(buckets["Service"]) > 0
-    has_policy = any("hasMerchantReturnPolicy" in p or "hasWarrantyPromise" in p for p in buckets["Product"] + buckets["ProductGroup"])
+
+    # Build @id index to resolve references within the same JSON-LD graph
+    id_index = {}
+    for it in items:
+        _id = it.get("@id")
+        if isinstance(_id, str):
+            id_index[_id] = it
+
+    def _types(it):
+        t = it.get("@type")
+        if isinstance(t, list):
+            return [x for x in t if isinstance(x, str)]
+        return [t] if isinstance(t, str) else []
+
+    def _resolve(value):
+        """Resolve @id references inside the same page graph; return list of concrete dicts."""
+        if value is None:
+            return []
+        if isinstance(value, list):
+            out = []
+            for v in value:
+                out.extend(_resolve(v))
+            return out
+        if isinstance(value, dict):
+            # If it's a dict with @id that points to another object, resolve; otherwise keep as-is
+            ref = value.get("@id")
+            if isinstance(ref, str) and ref in id_index:
+                return [id_index[ref]]
+            return [value]
+        if isinstance(value, str) and value in id_index:
+            return [id_index[value]]
+        return []
+
+    def _has_shipping_details(obj: dict) -> bool:
+        # Check Offer.shippingDetails on offers attached to a Product
+        offers = obj.get("offers")
+        for off in _resolve(offers):
+            if isinstance(off, dict) and ("shippingDetails" in off):
+                return True
+        return False
+
+    def _has_policies(obj: dict) -> bool:
+        # Direct policy fields on object
+        if "hasMerchantReturnPolicy" in obj or "hasWarrantyPromise" in obj:
+            return True
+        # Resolve referenced policies
+        for key in ("hasMerchantReturnPolicy", "hasWarrantyPromise"):
+            for resolved in _resolve(obj.get(key)):
+                if isinstance(resolved, dict):
+                    return True
+        # Offers can carry shipping details (treated as policy-related for X dimension)
+        if _has_shipping_details(obj):
+            return True
+        return False
+
+    # Policy can be on Product/ProductGroup or on Organization in the same page graph
+    has_policy_product = any(_has_policies(p) for p in buckets["Product"] + buckets["ProductGroup"])
+    # Scan all items for Organization-level defaults
+    has_policy_org = any(_has_policies(it) for it in items if "Organization" in _types(it))
+    has_policy_structured = has_policy_product or has_policy_org
+    
+    # Check for policy page links (discoverability, even if not structured)
+    has_policy_link = has_policy_links(html)
+    
+    # Check if policy pages themselves have structured data
+    has_policy_structured_on_policy_page = False
+    if has_policy_link and not has_policy_structured:
+        # Extract policy URLs and check them
+        policy_urls = extract_policy_urls(html, url)
+        for policy_url in policy_urls[:3]:  # Limit to first 3 to avoid too many requests
+            try:
+                policy_html = fetch_html(policy_url)
+                policy_items = extract_jsonld(policy_html, policy_url)
+                # Check if policy page has MerchantReturnPolicy or WarrantyPromise
+                for item in policy_items:
+                    item_types = _types(item)
+                    if "MerchantReturnPolicy" in item_types or "WarrantyPromise" in item_types:
+                        has_policy_structured_on_policy_page = True
+                        break
+                    # Check if it's an Organization with policies
+                    if "Organization" in item_types and _has_policies(item):
+                        has_policy_structured_on_policy_page = True
+                        break
+                if has_policy_structured_on_policy_page:
+                    break
+            except Exception:
+                # Skip policy pages that fail to fetch
+                pass
+    
+    # Combined policy score: structured is best, links are better than nothing
+    has_policy = has_policy_structured or has_policy_link or has_policy_structured_on_policy_page
 
     ident_ok = False
     specs_units = False
+    rating_value = None
+    rating_count = None
+    has_rating = False
+    
     for p in buckets["Product"]:
         ids = product_identifiers(p)
         ident_ok |= bool(ids.get("gtin13") or ids.get("gtin14") or (ids.get("brand") and ids.get("mpn")))
         specs_units |= has_units(p.get("additionalProperty"))
+        
+        # Extract AggregateRating from Product.aggregateRating
+        agg_rating = p.get("aggregateRating")
+        if agg_rating:
+            if isinstance(agg_rating, dict):
+                rating_value = agg_rating.get("ratingValue")
+                rating_count = agg_rating.get("ratingCount") or agg_rating.get("reviewCount")
+                if rating_value is not None:
+                    has_rating = True
+            elif isinstance(agg_rating, str) and agg_rating in id_index:
+                # Resolve @id reference
+                resolved = id_index[agg_rating]
+                rating_value = resolved.get("ratingValue")
+                rating_count = resolved.get("ratingCount") or resolved.get("reviewCount")
+                if rating_value is not None:
+                    has_rating = True
+    
+    # Also check standalone AggregateRating entities
+    if not has_rating and buckets["AggregateRating"]:
+        for ar in buckets["AggregateRating"]:
+            rating_value = ar.get("ratingValue")
+            rating_count = ar.get("ratingCount") or ar.get("reviewCount")
+            if rating_value is not None:
+                has_rating = True
+                break
 
     w = DEFAULT_SCORING.product_weights
     product_score = (
@@ -60,10 +179,16 @@ def score_url(url: str) -> dict:
         "has_offer": int(has_offer),
         "identifiers": int(ident_ok),
         "policies": int(has_policy),
+        "policy_structured": int(has_policy_structured),
+        "policy_link": int(has_policy_link),
+        "policy_structured_on_policy_page": int(has_policy_structured_on_policy_page),
         "specs_units": int(specs_units),
         "productgroup": int(has_productgroup),
         "product_score": product_score,
         "family_score": family_score,
+        "has_rating": int(has_rating),
+        "rating_value": rating_value if rating_value is not None else "",
+        "rating_count": rating_count if rating_count is not None else "",
     }
 
 def audit_urls(urls, out_csv: str):
@@ -78,10 +203,12 @@ def audit_urls(urls, out_csv: str):
             rows.append({
                 "url": u, "error": str(e),
                 "server_jsonld": 0, "has_product": 0, "has_offer": 0,
-                "identifiers": 0, "policies": 0, "specs_units": 0,
-                "productgroup": 0, "product_score": 0, "family_score": 0
+                "identifiers": 0, "policies": 0, "policy_structured": 0, "policy_link": 0,
+                "policy_structured_on_policy_page": 0, "specs_units": 0, 
+                "productgroup": 0, "product_score": 0, "family_score": 0,
+                "has_rating": 0, "rating_value": "", "rating_count": ""
             })
-    fieldnames = ["url","server_jsonld","has_product","has_offer","identifiers","policies","specs_units","productgroup","product_score","family_score","error"]
+    fieldnames = ["url","server_jsonld","has_product","has_offer","identifiers","policies","policy_structured","policy_link","policy_structured_on_policy_page","specs_units","productgroup","product_score","family_score","has_rating","rating_value","rating_count","error"]
     with open(out_csv, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=fieldnames)
         w.writeheader()

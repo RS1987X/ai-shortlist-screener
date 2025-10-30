@@ -35,12 +35,24 @@ def _load_category_mappings(base_path: str):
     
     return intent_cats, peer_cats
 
-def compute_lar(asr_report_csv: str, soa_csv: str, dist_csv: str, service_csv: str, out_csv: str) -> None:
+def compute_lar(asr_report_csv: str, soa_csv: str, service_csv: str = None, out_csv: str = "lar.csv") -> None:
+    """
+    Compute LAR scores from audit and supplementary data.
+    
+    LAR = 0.40·E + 0.25·X + 0.25·A + 0.10·S
+    
+    S dimension can be computed from:
+    - Audit data: AggregateRating from product pages (auto-computed)
+    - service_csv: Manual override for retailers (optional)
+    
+    Note: D (Distribution) dimension has been removed as it's not applicable to 
+    third-party retailers selling through own channels. See methodology.md for details.
+    """
     # Load category mappings
     intent_cats, peer_cats = _load_category_mappings(asr_report_csv)
     
     # E/X from audit - now organized by domain AND intent
-    per_intent = defaultdict(lambda: defaultdict(lambda: {"E": [], "X": []}))
+    per_intent = defaultdict(lambda: defaultdict(lambda: {"E": [], "X": [], "ratings": []}))
     
     with open(asr_report_csv, encoding="utf-8") as f:
         r = csv.DictReader(f)
@@ -48,7 +60,36 @@ def compute_lar(asr_report_csv: str, soa_csv: str, dist_csv: str, service_csv: s
             url = row["url"]
             k = _root(url)
             e = float(row["product_score"]) * 0.8 + float(row["family_score"]) * 0.2
-            x = (int(row.get("policies",0)) + int(row.get("specs_units",0))) * 50
+            
+            # X dimension: structured policies get full credit, policy page structured gets good credit, links get partial
+            policy_structured = int(row.get("policy_structured", 0))
+            policy_structured_on_policy_page = int(row.get("policy_structured_on_policy_page", 0))
+            policy_link = int(row.get("policy_link", 0))
+            specs_units = int(row.get("specs_units", 0))
+            
+            # Scoring: structured on product page = 50 points, structured on policy page = 40 points, links only = 25 points, specs = 50 points
+            if policy_structured:
+                x_policy = 50
+            elif policy_structured_on_policy_page:
+                x_policy = 40
+            elif policy_link:
+                x_policy = 25
+            else:
+                x_policy = 0
+            
+            x_specs = 50 if specs_units else 0
+            x = x_policy + x_specs
+            
+            # Extract rating if present (normalize to 0-100 scale, assuming 5-star max)
+            rating_value = row.get("rating_value", "").strip()
+            if rating_value:
+                try:
+                    rating_float = float(rating_value)
+                    # Normalize to 0-100 (assuming 5-star scale)
+                    rating_normalized = (rating_float / 5.0) * 100
+                    per_intent[k]["_all"]["ratings"].append(rating_normalized)
+                except ValueError:
+                    pass
             
             # Try to extract intent_id from URL or use a default key
             # For now, we'll aggregate all URLs per domain
@@ -57,9 +98,15 @@ def compute_lar(asr_report_csv: str, soa_csv: str, dist_csv: str, service_csv: s
     
     # Compute per-domain E/X (simple average for now)
     E, X = {}, {}
+    S_from_audit = {}
     for k, intents in per_intent.items():
         E[k] = stats.mean(intents["_all"]["E"]) if intents["_all"]["E"] else 0.0
         X[k] = stats.mean(intents["_all"]["X"]) if intents["_all"]["X"] else 0.0
+        # Compute S from audit ratings (average of all product ratings for this domain)
+        if intents["_all"]["ratings"]:
+            S_from_audit[k] = stats.mean(intents["_all"]["ratings"])
+        else:
+            S_from_audit[k] = 0.0
 
     def _load_simple(path):
         d = {}
@@ -71,8 +118,21 @@ def compute_lar(asr_report_csv: str, soa_csv: str, dist_csv: str, service_csv: s
         return d
 
     A = _load_simple(soa_csv)
-    D = _load_simple(dist_csv)
-    S = _load_simple(service_csv)
+    
+    # S: Use manual service.csv if provided, otherwise use audit ratings
+    if service_csv:
+        S_manual = _load_simple(service_csv)
+    else:
+        S_manual = {}
+    
+    # Merge S scores: manual overrides auto-computed
+    S = {}
+    all_domains = set(E.keys()) | set(S_from_audit.keys()) | set(S_manual.keys())
+    for domain in all_domains:
+        if domain in S_manual:
+            S[domain] = S_manual[domain]  # Manual override
+        else:
+            S[domain] = S_from_audit.get(domain, 0.0)  # Auto-computed from audit
 
     # Match domain keys to brand names for category lookup
     def _find_brand_for_domain(domain):
@@ -84,16 +144,15 @@ def compute_lar(asr_report_csv: str, soa_csv: str, dist_csv: str, service_csv: s
         return None
 
     out_rows = []
-    keys = set(E) | set(A) | set(D) | set(S)
+    keys = set(E) | set(A) | set(S)
     for k in sorted(keys):
         e = E.get(k, 0.0)
         x = X.get(k, 0.0)
         a = A.get(k, 0.0)
-        d = D.get(k, 0.0)
         s = S.get(k, 0.0)
 
-        # Standard LAR calculation (can be enhanced with category weighting in future)
-        lar = 0.30*e + 0.20*x + 0.25*a + 0.15*d + 0.10*s
+        # LAR calculation: E·X·A·S (D dimension removed)
+        lar = 0.40*e + 0.25*x + 0.25*a + 0.10*s
         if e < 60:
             lar = min(lar, 40.0)
         
@@ -108,13 +167,12 @@ def compute_lar(asr_report_csv: str, soa_csv: str, dist_csv: str, service_csv: s
             "E": round(e,2),
             "X": round(x,2),
             "A": a,
-            "D": d,
             "S": s,
             "LAR": round(lar,2)
         })
 
     with open(out_csv, "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=["key","brand","categories","E","X","A","D","S","LAR"])
+        w = csv.DictWriter(f, fieldnames=["key","brand","categories","E","X","A","S","LAR"])
         w.writeheader()
         for r in out_rows:
             w.writerow(r)
@@ -123,30 +181,36 @@ def compute_lar(asr_report_csv: str, soa_csv: str, dist_csv: str, service_csv: s
 def compute_category_weighted_lar(
     asr_report_csv: str,
     soa_csv: str,
-    dist_csv: str,
-    service_csv: str,
-    out_csv: str,
+    service_csv: str = None,
+    out_csv: str = "lar_weighted.csv",
     intent_log_csv: str = None
 ) -> None:
     """
     Compute LAR with category weighting to handle peer category imbalance.
     
-    Each peer's LAR is computed as the average of their category-level scores,
+    LAR = 0.40·E + 0.25·X + 0.25·A + 0.10·S
+    
+    Each peer LAR is computed as the average of their category-level scores,
     giving equal weight to each category they compete in (not each intent).
     
     Args:
         asr_report_csv: Audit report with E/X scores per URL
         soa_csv: Share-of-answer scores by brand/domain
-        dist_csv: Distribution coherence scores by brand/domain
-        service_csv: Service/actionability scores by brand/domain
+        service_csv: Optional service/satisfaction scores by brand/domain (if not provided, computed from audit)
         out_csv: Output file for weighted LAR scores
         intent_log_csv: Optional intent-level results for per-category A computation
+    
+    S dimension can be computed from:
+    - Audit data: AggregateRating from product pages (auto-computed)
+    - service_csv: Manual override for retailers (optional)
+    
+    Note: D (Distribution) dimension has been removed. See methodology.md for details.
     """
     # Load category mappings
     intent_cats, peer_cats = _load_category_mappings(asr_report_csv)
     
     # E/X from audit - organize by domain and intent
-    per_domain_intent = defaultdict(lambda: defaultdict(lambda: {"E": [], "X": []}))
+    per_domain_intent = defaultdict(lambda: defaultdict(lambda: {"E": [], "X": [], "ratings": []}))
     
     with open(asr_report_csv, encoding="utf-8") as f:
         r = csv.DictReader(f)
@@ -154,7 +218,36 @@ def compute_category_weighted_lar(
             url = row["url"]
             domain = _root(url)
             e = float(row["product_score"]) * 0.8 + float(row["family_score"]) * 0.2
-            x = (int(row.get("policies", 0)) + int(row.get("specs_units", 0))) * 50
+            
+            # X dimension: structured policies get full credit, policy page structured gets good credit, links get partial
+            policy_structured = int(row.get("policy_structured", 0))
+            policy_structured_on_policy_page = int(row.get("policy_structured_on_policy_page", 0))
+            policy_link = int(row.get("policy_link", 0))
+            specs_units = int(row.get("specs_units", 0))
+            
+            # Scoring: structured on product page = 50 points, structured on policy page = 40 points, links only = 25 points, specs = 50 points
+            if policy_structured:
+                x_policy = 50
+            elif policy_structured_on_policy_page:
+                x_policy = 40
+            elif policy_link:
+                x_policy = 25
+            else:
+                x_policy = 0
+            
+            x_specs = 50 if specs_units else 0
+            x = x_policy + x_specs
+            
+            # Extract rating if present (normalize to 0-100 scale, assuming 5-star max)
+            rating_value = row.get("rating_value", "").strip()
+            if rating_value:
+                try:
+                    rating_float = float(rating_value)
+                    rating_normalized = (rating_float / 5.0) * 100
+                    intent_id = row.get("intent_id", "_all")
+                    per_domain_intent[domain][intent_id]["ratings"].append(rating_normalized)
+                except ValueError:
+                    pass
             
             # Extract intent_id if available in the row, otherwise use "_all"
             intent_id = row.get("intent_id", "_all")
@@ -180,13 +273,24 @@ def compute_category_weighted_lar(
     # Average E/X per domain per category
     E_by_cat = defaultdict(dict)
     X_by_cat = defaultdict(dict)
+    S_from_audit = {}
     
     for domain, categories in domain_category_scores.items():
         for category, scores in categories.items():
             E_by_cat[domain][category] = stats.mean(scores["E"]) if scores["E"] else 0.0
             X_by_cat[domain][category] = stats.mean(scores["X"]) if scores["X"] else 0.0
     
-    # Load A/D/S (these are overall, not per-category for now)
+    # Compute S from all audit ratings per domain (not per-category)
+    for domain, intents in per_domain_intent.items():
+        all_ratings = []
+        for intent_id, scores in intents.items():
+            all_ratings.extend(scores["ratings"])
+        if all_ratings:
+            S_from_audit[domain] = stats.mean(all_ratings)
+        else:
+            S_from_audit[domain] = 0.0
+    
+    # Load A/S (these are overall, not per-category for now)
     def _load_simple(path):
         d = {}
         with open(path, encoding="utf-8") as f:
@@ -197,8 +301,21 @@ def compute_category_weighted_lar(
         return d
     
     A = _load_simple(soa_csv)
-    D = _load_simple(dist_csv)
-    S = _load_simple(service_csv)
+    
+    # S: Use manual service.csv if provided, otherwise use audit ratings
+    if service_csv:
+        S_manual = _load_simple(service_csv)
+    else:
+        S_manual = {}
+    
+    # Merge S scores: manual overrides auto-computed
+    S = {}
+    all_domains = set(E_by_cat.keys()) | set(S_from_audit.keys()) | set(S_manual.keys())
+    for domain in all_domains:
+        if domain in S_manual:
+            S[domain] = S_manual[domain]  # Manual override
+        else:
+            S[domain] = S_from_audit.get(domain, 0.0)  # Auto-computed from audit
     
     # Match domains to brands
     def _find_brand_for_domain(domain):
@@ -211,7 +328,7 @@ def compute_category_weighted_lar(
     
     # Compute category-weighted LAR for each peer
     out_rows = []
-    all_domains = set(E_by_cat.keys()) | set(A.keys()) | set(D.keys()) | set(S.keys())
+    all_domains = set(E_by_cat.keys()) | set(A.keys()) | set(S.keys())
     
     for domain in sorted(all_domains):
         brand = _find_brand_for_domain(domain)
@@ -225,10 +342,9 @@ def compute_category_weighted_lar(
             e_cat = E_by_cat.get(domain, {}).get(category, 0.0)
             x_cat = X_by_cat.get(domain, {}).get(category, 0.0)
             a_cat = A.get(domain, 0.0)  # TODO: make A per-category if intent log available
-            d_cat = D.get(domain, 0.0)
             s_cat = S.get(domain, 0.0)
             
-            lar_cat = 0.30 * e_cat + 0.20 * x_cat + 0.25 * a_cat + 0.15 * d_cat + 0.10 * s_cat
+            lar_cat = 0.40 * e_cat + 0.25 * x_cat + 0.25 * a_cat + 0.10 * s_cat
             if e_cat < 60:
                 lar_cat = min(lar_cat, 40.0)
             
@@ -249,9 +365,8 @@ def compute_category_weighted_lar(
             overall_e = stats.mean([v for cat_scores in E_by_cat.get(domain, {}).values() for v in [cat_scores]]) if E_by_cat.get(domain) else 0.0
             overall_x = stats.mean([v for cat_scores in X_by_cat.get(domain, {}).values() for v in [cat_scores]]) if X_by_cat.get(domain) else 0.0
             a_val = A.get(domain, 0.0)
-            d_val = D.get(domain, 0.0)
             s_val = S.get(domain, 0.0)
-            weighted_lar = 0.30 * overall_e + 0.20 * overall_x + 0.25 * a_val + 0.15 * d_val + 0.10 * s_val
+            weighted_lar = 0.40 * overall_e + 0.25 * overall_x + 0.25 * a_val + 0.10 * s_val
             if overall_e < 60:
                 weighted_lar = min(weighted_lar, 40.0)
         
@@ -263,7 +378,6 @@ def compute_category_weighted_lar(
             "E": round(overall_e, 2),
             "X": round(overall_x, 2),
             "A": A.get(domain, 0.0),
-            "D": D.get(domain, 0.0),
             "S": S.get(domain, 0.0),
             "LAR_weighted": round(weighted_lar, 2),
             "category_details": str(category_details)
@@ -272,7 +386,7 @@ def compute_category_weighted_lar(
     with open(out_csv, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=[
             "key", "brand", "categories", "num_categories",
-            "E", "X", "A", "D", "S", "LAR_weighted", "category_details"
+            "E", "X", "A", "S", "LAR_weighted", "category_details"
         ])
         w.writeheader()
         for r in out_rows:

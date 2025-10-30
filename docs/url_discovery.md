@@ -2,22 +2,47 @@
 
 ## Overview
 
-The `asr discover` command finds product URLs for each intent × peer combination using **site-specific Google searches** to minimize bias.
+The `asr discover` command finds product URLs for each intent × peer combination using one of three methods:
+
+1. **🎯 Sitemap Search (Recommended)** - Download retailer sitemaps, search locally (fast, free, no API)
+2. **🔍 Google Custom Search API** - Site-specific Google searches (reliable, costs money)
+3. **⚠️ Web Scraping** - Last resort (slow, blocked often, violates ToS)
 
 ---
 
-## Quick Start (No API Key - Limited)
+## Quick Start (Sitemap - No API Key Required)
 
 ```bash
-# Uses web scraping (slow, may be blocked, violates ToS)
-asr discover --no-use-api
+# Default: Uses sitemap search (fast, free, reliable)
+asr discover
+
+# Sitemap with Google API fallback
+asr discover --use-sitemap --use-api
+```
+
+**Advantages**: 
+- ✅ Fast (5-10 seconds per retailer)
+- ✅ Free (no API costs)
+- ✅ Reliable (no rate limits)
+- ✅ 75% retailer coverage (12/16 have sitemaps)
+
+**See:** [Sitemap Discovery Guide](sitemap_discovery.md) for detailed documentation.
+
+---
+
+## Alternative: Google Custom Search API
+
+For retailers without sitemaps or when higher precision is needed:
+
+```bash
+# Google API only
+asr discover --no-use-sitemap --use-api
 ```
 
 **Limitations**: 
-- Slow (3-5 sec per query)
-- May be blocked by Google
-- Violates Google ToS
-- Not recommended for >50 queries
+- Requires API key (free tier: 100 queries/day)
+- Costs $5/1000 queries beyond free tier
+- Good for 100% retailer coverage
 
 ---
 
@@ -201,7 +226,89 @@ After running discovery:
 cat data/audit_urls.csv | less
 
 # 2. Run audit on discovered URLs
-# (TODO: Update audit to read from audit_urls.csv format)
+# (## Filtering Product Pages vs. Category Pages
+
+The discovery system uses **generic pattern matching** to ensure only product detail pages (PDPs) are returned, not category or listing pages. This works across different e-commerce platforms and languages.
+
+### Product Page Detection Logic
+
+**Strong product indicators** (path-based):
+- `/product/`, `/produkt/`, `/p/`, `/art/`, `/artikel/`
+- `/item/`, `/pd/`, `-p-`
+
+**Product ID patterns** (must have one):
+- Numeric ID at end: `/product-name/12345` or `/product-name-12345`
+- Alphanumeric SKU: `/product-name-CB1022` or `/adapter-p65980`
+- Pattern: 4+ digits or letter-number codes at path end
+
+**Category page signals** (automatic rejection):
+- Generic category paths: `/category/`, `/katalog/`, `/browse/`
+- Shallow structure: 2-3 segments with no product ID (e.g., `/electronics/laptops`)
+- Last segment is category name only (no numbers): `/datorskarmar`, `/powerbank`
+- Title patterns: "245 produkter", "visa alla", "browse", "category:"
+
+### Decision Tree
+
+```
+1. Has strong product indicator? (e.g., /product/, /art/)
+   ├─ YES: Has product ID/code at end?
+   │   ├─ YES: ✅ Product page (score based on relevance)
+   │   └─ NO: Has category signals?
+   │       ├─ YES: ❌ Category page (score = 0)
+   │       └─ NO: ❌ Uncertain, reject (score = 0)
+   └─ NO: Has product ID/code?
+       ├─ YES: ⚠️ Weak product signal (needs review)
+       └─ NO: ❌ Not a product page (score = 0)
+```
+
+### Examples
+
+✅ **Valid product pages:**
+```
+https://www.elgiganten.se/product/datorer/laptop/belkin-usb-hub/286349
+  → Strong: /product/, ID: 286349 ✓
+
+https://www.kjell.com/se/produkter/dator/usb-c-adapter-cb1022-p65980
+  → Strong: /produkter/, SKU: cb1022-p65980 ✓
+
+https://www.netonnet.se/art/dator-surfplatta/usb-hub/1018141.14397/
+  → Strong: /art/, ID: 1018141.14397 ✓
+
+https://www.amazon.com/dp/B08XYZ123
+  → Strong: /dp/, ID: B08XYZ123 ✓
+```
+
+❌ **Rejected category pages:**
+```
+https://www.netonnet.se/art/dator-surfplatta/datorskarmar/datorskarmar-31-tum-storre
+  → No product ID, last segment is category name ✗
+
+https://www.kjell.com/se/produkter/dator/datorskarmar/kontorsskarmar
+  → 3 segments, no ID, last = "kontorsskarmar" (office monitors) ✗
+
+https://www.kjell.com/se/produkter/mobilt/powerbank
+  → 2 segments, no ID, shallow structure ✗
+
+https://example.com/products
+  → Generic "/products" without ID ✗
+
+https://example.com/category/electronics/laptops
+  → "/category/" path, shallow structure ✗
+```
+
+### Why This Matters
+
+- **Audit accuracy**: Category pages have no product schema → E=0, skews results
+- **Intent matching**: Can't verify if category contains the right product
+- **Fair comparison**: All peers must be evaluated on equivalent page types
+- **Language/platform agnostic**: Works for Swedish, English, German sites; works for various e-commerce platforms
+
+### When Discovery Returns `found=0`
+
+If no product page is found matching the intent:
+- **Valuable signal**: Peer may not carry that product category
+- **Not a failure**: Helps identify category gaps in peer coverage
+- **Action**: Manually verify if peer truly lacks that product category: Update audit to read from audit_urls.csv format)
 
 # 3. Manually query AI assistants for SoA data
 # Use intents from intents_peer_core_sv.csv

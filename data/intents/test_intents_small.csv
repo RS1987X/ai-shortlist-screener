@@ -1,0 +1,4 @@
+intent_id,category,prompt,budget,constraints,locale
+INT01,Elektroniktillbehör,USB-C hub HDMI 4K och 100 W PD under 800 kr.,800,HDMI 4K; 100W PD; USB-C; pris < 800 kr,sv-SE
+INT03,Skärmar,"24"" IPS-skärm 75 Hz, höjdjusterbar, VESA under 1 600 kr.",1600,24 tum; IPS; 75 Hz; höjdjusterbar; VESA; pris < 1600 kr,sv-SE
+INT04,Ström,Powerbank 20 000 mAh med 30 W USB‑C PD under 600 kr.,600,20000 mAh; 30W USB-C PD; flygsäker; pris < 600 kr,sv-SE
