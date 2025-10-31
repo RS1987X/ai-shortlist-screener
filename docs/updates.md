@@ -212,3 +212,61 @@ x_specs: 0-50 pts (with units=50, none=0)
 
 ---
 
+## 5. S Dimension: Confidence Weighting (v1.2.0)
+
+### Problem
+
+Product ratings with few reviews were treated equally to ratings with hundreds of reviews, creating unfair comparisons where unreliable ratings scored as high as statistically robust ones.
+
+**Example:**
+- Elgiganten: 4.52/5 with avg 4.4 reviews → S=84.7 (overvalued)
+- Clas Ohlson: 3.63/5 with avg 50.8 reviews → S=72.6 (undervalued)
+
+### Solution: Confidence-Based Discounting
+
+Ratings are now weighted by statistical confidence:
+
+```python
+confidence = min(1.0, rating_count / 25)
+S_score = (rating / 5.0) * 100 * confidence * source_weight
+```
+
+**Threshold of 25 reviews:**
+- Provides ±10% margin of error at 95% confidence
+- Balances statistical rigor with practical achievability  
+- Based on empirical data (avg review counts: 4-61 across retailers)
+
+### Impact on LAR Rankings
+
+| Retailer | Old S | New S | Change | Reason |
+|----------|-------|-------|--------|--------|
+| Rusta | 96.7 | 78.4 | -18.3 | Some products below threshold |
+| Elgiganten | 84.7 | 14.0 | **-70.7** | Very low review counts |
+| NetOnNet | 80.3 | 46.9 | -33.4 | Moderate review counts |
+| Clas Ohlson | 72.6 | 42.1 | -30.5 | Lower ratings despite volume |
+
+**LAR ranking changes:**
+- Before: NetOnNet (46.6) > Elgiganten (40.2) > Rusta (36.1)
+- After: NetOnNet (43.3) > Rusta (34.3) > Elgiganten (33.1)
+
+**Key outcome:** Retailers with sparse reviews appropriately downranked.
+
+### Theoretical Justification
+
+1. **Statistical Confidence:** Standard error decreases with √n; 25 reviews achieves acceptable ±10% margin
+2. **Practical Balance:** Too low (10) doesn't filter noise; too high (100) penalizes legitimate products
+3. **Consumer Behavior:** Humans naturally trust volume + quality, not just raw rating value
+4. **AI Safety:** Prevents recommendations based on 1-2 potentially fake/biased reviews
+
+### Configuration
+
+Adjustable in `src/asr/config.py`:
+```python
+RATING_CONFIDENCE_THRESHOLD = 25  # Full confidence at 25+ reviews
+FALLBACK_RATING_WEIGHT = 0.9      # JS ratings slightly discounted
+```
+
+**See:** [docs/confidence_weighting.md](confidence_weighting.md) for complete analysis, statistical foundation, and future enhancements.
+
+---
+

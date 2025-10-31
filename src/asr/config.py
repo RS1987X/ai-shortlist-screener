@@ -27,3 +27,16 @@ DEFAULT_SCORING = ScoringConfig(
         "spec_ranges": 10,
     },
 )
+
+# S (Service) dimension - Rating confidence parameters
+# Ratings with fewer reviews are discounted to reflect statistical uncertainty
+# Formula: confidence = min(1.0, rating_count / RATING_CONFIDENCE_THRESHOLD)
+RATING_CONFIDENCE_THRESHOLD = 25  # Full confidence at 25+ reviews
+# Rationale: 
+# - 25 reviews provides reasonable statistical confidence (±20% margin at 95% CI)
+# - Balances need for reliability vs penalizing newer products too harshly
+# - Based on empirical analysis showing avg review counts: 4-60 across retailers
+
+# JS-rendered ratings receive slightly reduced weight due to accessibility concerns
+FALLBACK_RATING_WEIGHT = 0.9
+

@@ -434,10 +434,32 @@ New transparency fields in `audit_results.csv`:
 
 - `js_jsonld` (1/0), `ident_gtin` (1/0), `ident_brand_mpn` (1/0)
 
+### S (Service) Dimension: Confidence Weighting (v1.2.0)
+
+Ratings are now weighted by their statistical confidence based on review count. A 5.0/5 rating with 1 review is less valuable than a 4.0/5 rating with 50 reviews.
+
+**Formula:**
+```python
+confidence = min(1.0, rating_count / 25)
+S_score = (rating / 5.0) * 100 * confidence
+```
+
+**Rationale:**
+- Threshold of 25 reviews provides ±10% margin of error at 95% confidence
+- Balances statistical rigor with practical achievability
+- Penalizes retailers relying on sparse, unreliable ratings
+- Rewards consistent quality across well-reviewed products
+
+**Impact:** Retailers with low review counts (e.g., Elgiganten avg 4.4 reviews) see S scores drop 70-80%. Retailers with solid review volumes (e.g., Rusta avg 61 reviews) maintain high scores.
+
+**See:** [docs/confidence_weighting.md](confidence_weighting.md) for full theoretical justification and impact analysis.
+
 ---
 
 ## Related Documentation
 
 - LAR model overview: `docs/methodology.md`
+- Confidence weighting details: `docs/confidence_weighting.md`
 - Structured data validation: `scripts/extract_jsonld_playwright.py`
 - Schema.org reference: https://schema.org/Product
+

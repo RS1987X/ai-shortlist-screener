@@ -5,9 +5,8 @@ import statistics as stats
 from pathlib import Path
 from collections import defaultdict
 
-# Weight applied to ratings derived from fallback (embedded/inline) sources.
-# JSON-LD ratings get full weight (1.0). Fallback ratings are discounted.
-FALLBACK_RATING_WEIGHT = 0.7
+from .config import RATING_CONFIDENCE_THRESHOLD, FALLBACK_RATING_WEIGHT
+
 
 def _root(url: str) -> str:
     return urlparse(url).netloc
@@ -87,16 +86,31 @@ def compute_lar(asr_report_csv: str, soa_csv: str, service_csv: str = None, out_
             # Extract rating if present (normalize to 0-100 scale, assuming 5-star max)
             # Prefer JSON-LD rating; if missing, use fallback with reduced weight
             rating_value = (row.get("rating_value", "") or "").strip()
+            rating_count = (row.get("rating_count", "") or "").strip()
             rating_source_weight = 1.0
             if not rating_value:
                 rating_value = (row.get("rating_value_fallback", "") or "").strip()
+                rating_count = (row.get("rating_count_fallback", "") or "").strip()
                 if rating_value:
                     rating_source_weight = FALLBACK_RATING_WEIGHT
             if rating_value:
                 try:
                     rating_float = float(rating_value)
+                    # Apply confidence weighting based on review count
+                    # Ratings with fewer reviews are less reliable (statistical uncertainty)
+                    confidence = 1.0  # Default: full confidence
+                    if rating_count:
+                        try:
+                            count = int(rating_count)
+                            # Confidence scales linearly from 0 to 1.0 as reviews increase
+                            # Full confidence reached at RATING_CONFIDENCE_THRESHOLD reviews
+                            confidence = min(1.0, count / RATING_CONFIDENCE_THRESHOLD)
+                        except ValueError:
+                            pass  # If count invalid, use full confidence (conservative)
+                    
                     # Normalize to 0-100 (assuming 5-star scale)
-                    rating_normalized = (rating_float / 5.0) * 100 * rating_source_weight
+                    # Apply both confidence and source weights
+                    rating_normalized = (rating_float / 5.0) * 100 * confidence * rating_source_weight
                     per_intent[k]["_all"]["ratings"].append(rating_normalized)
                 except ValueError:
                     pass
@@ -251,15 +265,26 @@ def compute_category_weighted_lar(
             # Extract rating if present (normalize to 0-100 scale, assuming 5-star max)
             # Prefer JSON-LD rating; if missing, use fallback with reduced weight
             rating_value = (row.get("rating_value", "") or "").strip()
+            rating_count = (row.get("rating_count", "") or "").strip()
             rating_source_weight = 1.0
             if not rating_value:
                 rating_value = (row.get("rating_value_fallback", "") or "").strip()
+                rating_count = (row.get("rating_count_fallback", "") or "").strip()
                 if rating_value:
                     rating_source_weight = FALLBACK_RATING_WEIGHT
             if rating_value:
                 try:
                     rating_float = float(rating_value)
-                    rating_normalized = (rating_float / 5.0) * 100 * rating_source_weight
+                    # Apply confidence weighting based on review count
+                    confidence = 1.0  # Default: full confidence
+                    if rating_count:
+                        try:
+                            count = int(rating_count)
+                            confidence = min(1.0, count / RATING_CONFIDENCE_THRESHOLD)
+                        except ValueError:
+                            pass  # If count invalid, use full confidence (conservative)
+                    
+                    rating_normalized = (rating_float / 5.0) * 100 * confidence * rating_source_weight
                     intent_id = row.get("intent_id", "_all")
                     per_domain_intent[domain][intent_id]["ratings"].append(rating_normalized)
                 except ValueError:
