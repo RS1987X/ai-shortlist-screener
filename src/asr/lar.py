@@ -56,13 +56,39 @@ def compute_lar(asr_report_csv: str, soa_csv: str, service_csv: str = None, out_
     
     # E/X from audit - now organized by domain AND intent
     per_intent = defaultdict(lambda: defaultdict(lambda: {"E": [], "X": [], "ratings": []}))
+    # Attribution accumulators per domain
+    attrib = defaultdict(lambda: {
+        # E components
+        "product_scores": [],
+        "family_scores": [],
+        # X components (per-URL points and binary flags)
+        "x_policy_points": [],
+        "x_specs_points": [],
+        "policy_structured": 0,
+        "policy_structured_on_policy_page": 0,
+        "policy_link": 0,
+        "specs_units": 0,
+        "total_urls": 0,
+        # S components (raw and factors)
+        "raw_ratings": [],
+        "rating_counts": [],
+        "confidences": [],
+        "source_weights": [],
+        "fallback_used": 0,
+        "ratings_seen": 0,
+    })
     
     with open(asr_report_csv, encoding="utf-8") as f:
         r = csv.DictReader(f)
         for row in r:
             url = row["url"]
             k = _root(url)
-            e = float(row["product_score"]) * 0.8 + float(row["family_score"]) * 0.2
+            # Track E components
+            product_score = float(row["product_score"]) if row.get("product_score") not in (None, "") else 0.0
+            family_score = float(row["family_score"]) if row.get("family_score") not in (None, "") else 0.0
+            attrib[k]["product_scores"].append(product_score)
+            attrib[k]["family_scores"].append(family_score)
+            e = product_score * 0.8 + family_score * 0.2
             
             # X dimension: structured policies get full credit, policy page structured gets good credit, links get partial
             policy_structured = int(row.get("policy_structured", 0))
@@ -82,6 +108,15 @@ def compute_lar(asr_report_csv: str, soa_csv: str, service_csv: str = None, out_
             
             x_specs = 50 if specs_units else 0
             x = x_policy + x_specs
+
+            # Track X components and flags
+            attrib[k]["x_policy_points"].append(x_policy)
+            attrib[k]["x_specs_points"].append(x_specs)
+            attrib[k]["policy_structured"] += 1 if policy_structured else 0
+            attrib[k]["policy_structured_on_policy_page"] += 1 if policy_structured_on_policy_page else 0
+            attrib[k]["policy_link"] += 1 if policy_link else 0
+            attrib[k]["specs_units"] += 1 if specs_units else 0
+            attrib[k]["total_urls"] += 1
             
             # Extract rating if present (normalize to 0-100 scale, assuming 5-star max)
             # Prefer JSON-LD rating; if missing, use fallback with reduced weight
@@ -93,6 +128,7 @@ def compute_lar(asr_report_csv: str, soa_csv: str, service_csv: str = None, out_
                 rating_count = (row.get("rating_count_fallback", "") or "").strip()
                 if rating_value:
                     rating_source_weight = FALLBACK_RATING_WEIGHT
+                    attrib[k]["fallback_used"] += 1
             if rating_value:
                 try:
                     rating_float = float(rating_value)
@@ -105,6 +141,7 @@ def compute_lar(asr_report_csv: str, soa_csv: str, service_csv: str = None, out_
                             # Confidence scales linearly from 0 to 1.0 as reviews increase
                             # Full confidence reached at RATING_CONFIDENCE_THRESHOLD reviews
                             confidence = min(1.0, count / RATING_CONFIDENCE_THRESHOLD)
+                            attrib[k]["rating_counts"].append(count)
                         except ValueError:
                             pass  # If count invalid, use full confidence (conservative)
                     
@@ -114,6 +151,11 @@ def compute_lar(asr_report_csv: str, soa_csv: str, service_csv: str = None, out_
                     # Range: -100 (terrible 2.0/5) to +100 (perfect 5.0/5)
                     rating_normalized = ((rating_float - RATING_NEUTRAL_POINT) / RATING_SCALE_RANGE) * 100 * confidence * rating_source_weight
                     per_intent[k]["_all"]["ratings"].append(rating_normalized)
+                    # Track S components
+                    attrib[k]["raw_ratings"].append(rating_float)
+                    attrib[k]["confidences"].append(confidence)
+                    attrib[k]["source_weights"].append(rating_source_weight)
+                    attrib[k]["ratings_seen"] += 1
                 except ValueError:
                     pass
             
@@ -170,6 +212,7 @@ def compute_lar(asr_report_csv: str, soa_csv: str, service_csv: str = None, out_
         return None
 
     out_rows = []
+    attrib_rows = []
     keys = set(E) | set(A) | set(S)
     for k in sorted(keys):
         e = E.get(k, 0.0)
@@ -197,11 +240,122 @@ def compute_lar(asr_report_csv: str, soa_csv: str, service_csv: str = None, out_
             "LAR": round(lar,2)
         })
 
+        # Build attribution row
+        at = attrib.get(k, None)
+        total_urls = (at or {}).get("total_urls", 0)
+        # E components
+        e_prod_avg = round(stats.mean(at["product_scores"]) if at and at["product_scores"] else 0.0, 2)
+        e_fam_avg = round(stats.mean(at["family_scores"]) if at and at["family_scores"] else 0.0, 2)
+        e_contrib = round(0.40 * e, 2)
+        # X components
+        x_policy_avg = round(stats.mean(at["x_policy_points"]) if at and at["x_policy_points"] else 0.0, 2)
+        x_specs_avg = round(stats.mean(at["x_specs_points"]) if at and at["x_specs_points"] else 0.0, 2)
+        policy_structured_rate = round(((at["policy_structured"]) / total_urls), 3) if at and total_urls else 0.0
+        policy_structured_on_policy_page_rate = round(((at["policy_structured_on_policy_page"]) / total_urls), 3) if at and total_urls else 0.0
+        policy_link_rate = round(((at["policy_link"]) / total_urls), 3) if at and total_urls else 0.0
+        specs_units_rate = round(((at["specs_units"]) / total_urls), 3) if at and total_urls else 0.0
+        x_contrib = round(0.25 * x, 2)
+        # S components
+        s_source = "manual" if (k in S_manual) else "audit"
+        raw_rating_avg = round(stats.mean(at["raw_ratings"]) if at and at["raw_ratings"] else 0.0, 3)
+        rating_count_avg = round(stats.mean(at["rating_counts"]) if at and at["rating_counts"] else 0.0, 2)
+        confidence_avg = round(stats.mean(at["confidences"]) if at and at["confidences"] else 0.0, 3)
+        source_weight_avg = round(stats.mean(at["source_weights"]) if at and at["source_weights"] else 0.0, 3)
+        fallback_share = round(((at["fallback_used"]) / at["ratings_seen"]) , 3) if at and at["ratings_seen"] else 0.0
+        s_contrib = round(0.10 * s, 2)
+        # A contribution
+        a_contrib = round(0.25 * a, 2)
+
+        attrib_rows.append({
+            "key": k,
+            "brand": brand or k,
+            "categories": categories,
+            # Overall
+            "LAR": round(lar, 2),
+            # E breakdown
+            "E": round(e, 2),
+            "E_contrib": e_contrib,
+            "E_product_avg": e_prod_avg,
+            "E_family_avg": e_fam_avg,
+            # X breakdown
+            "X": round(x, 2),
+            "X_contrib": x_contrib,
+            "X_policy_points_avg": x_policy_avg,
+            "X_specs_points_avg": x_specs_avg,
+            "policy_structured_rate": policy_structured_rate,
+            "policy_structured_on_policy_page_rate": policy_structured_on_policy_page_rate,
+            "policy_link_rate": policy_link_rate,
+            "specs_units_rate": specs_units_rate,
+            # A breakdown
+            "A": a,
+            "A_contrib": a_contrib,
+            # S breakdown
+            "S": s,
+            "S_contrib": s_contrib,
+            "S_source": s_source,
+            "S_raw_rating_avg": raw_rating_avg,
+            "S_rating_count_avg": rating_count_avg,
+            "S_confidence_avg": confidence_avg,
+            "S_source_weight_avg": source_weight_avg,
+            "S_fallback_share": fallback_share,
+            # Volume context
+            "url_count": total_urls,
+            "ratings_seen": (at or {}).get("ratings_seen", 0)
+        })
+
     with open(out_csv, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=["key","brand","categories","E","X","A","S","LAR"])
         w.writeheader()
         for r in out_rows:
             w.writerow(r)
+
+    # Write attribution CSV next to main output with human-friendly column names
+    attrib_path = str(Path(out_csv).with_name(Path(out_csv).stem + "_attribution.csv"))
+    with open(attrib_path, "w", newline="", encoding="utf-8") as f:
+        # Map internal keys -> readable column headers
+        readable = [
+            ("key", "Domain"),
+            ("brand", "Brand"),
+            ("categories", "Categories"),
+            ("LAR", "LAR"),
+            # E (Eligibility)
+            ("E", "E (Eligibility)"),
+            ("E_contrib", "E contribution to LAR"),
+            ("E_product_avg", "E: product score avg"),
+            ("E_family_avg", "E: family score avg"),
+            # X (eXtensibility / eXtended attributes)
+            ("X", "X (eXtensibility)"),
+            ("X_contrib", "X contribution to LAR"),
+            ("X_policy_points_avg", "X: policy points avg"),
+            ("X_specs_points_avg", "X: specs points avg"),
+            ("policy_structured_rate", "Policy structured on PDP rate"),
+            ("policy_structured_on_policy_page_rate", "Policy structured on policy page rate"),
+            ("policy_link_rate", "Policy link only rate"),
+            ("specs_units_rate", "Specs with units rate"),
+            # A (Availability / Share of Answer)
+            ("A", "A (Share of Answer)"),
+            ("A_contrib", "A contribution to LAR"),
+            # S (Sentiment / Service)
+            ("S", "S (Sentiment)"),
+            ("S_contrib", "S contribution to LAR"),
+            ("S_source", "S: source"),
+            ("S_raw_rating_avg", "S: average star rating"),
+            ("S_rating_count_avg", "S: average rating count"),
+            ("S_confidence_avg", "S: average confidence"),
+            ("S_source_weight_avg", "S: average source weight"),
+            ("S_fallback_share", "S: fallback share"),
+            # Volume context
+            ("url_count", "URLs audited"),
+            ("ratings_seen", "Ratings found"),
+        ]
+
+        fieldnames = [human for _key, human in readable]
+        w = csv.DictWriter(f, fieldnames=fieldnames)
+        w.writeheader()
+        for r in attrib_rows:
+            # Remap row keys to human-friendly headers
+            out_row = {human: r.get(key, "") for key, human in readable}
+            w.writerow(out_row)
 
 
 def compute_category_weighted_lar(

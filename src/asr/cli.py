@@ -190,7 +190,8 @@ def lar(
         typer.echo(f"Wrote category-weighted LAR scores to {out}")
     else:
         compute_lar(asr_report_csv, soa_csv, service_csv, out)
-        typer.echo(f"Wrote LAR scores to {out}")
+        attrib_path = str(Path(out).with_name(Path(out).stem + "_attribution.csv"))
+        typer.echo(f"Wrote LAR scores to {out}\nWrote attribution breakdown to {attrib_path}")
 
 if __name__ == "__main__":
     app()
