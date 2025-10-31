@@ -5,7 +5,7 @@ import statistics as stats
 from pathlib import Path
 from collections import defaultdict
 
-from .config import RATING_CONFIDENCE_THRESHOLD, FALLBACK_RATING_WEIGHT
+from .config import RATING_CONFIDENCE_THRESHOLD, FALLBACK_RATING_WEIGHT, RATING_NEUTRAL_POINT, RATING_SCALE_RANGE
 
 
 def _root(url: str) -> str:
@@ -108,9 +108,11 @@ def compute_lar(asr_report_csv: str, soa_csv: str, service_csv: str = None, out_
                         except ValueError:
                             pass  # If count invalid, use full confidence (conservative)
                     
-                    # Normalize to 0-100 (assuming 5-star scale)
-                    # Apply both confidence and source weights
-                    rating_normalized = (rating_float / 5.0) * 100 * confidence * rating_source_weight
+                    # CENTERED SCORING: 3.5/5 is the neutral point (S=0)
+                    # Formula: S = ((rating - 3.5) / 1.5) * 100
+                    # This creates active avoidance of poor ratings (<3.5) and rewards good ratings (>3.5)
+                    # Range: -100 (terrible 2.0/5) to +100 (perfect 5.0/5)
+                    rating_normalized = ((rating_float - RATING_NEUTRAL_POINT) / RATING_SCALE_RANGE) * 100 * confidence * rating_source_weight
                     per_intent[k]["_all"]["ratings"].append(rating_normalized)
                 except ValueError:
                     pass
@@ -284,7 +286,8 @@ def compute_category_weighted_lar(
                         except ValueError:
                             pass  # If count invalid, use full confidence (conservative)
                     
-                    rating_normalized = (rating_float / 5.0) * 100 * confidence * rating_source_weight
+                    # CENTERED SCORING: 3.5/5 is the neutral point (S=0)
+                    rating_normalized = ((rating_float - RATING_NEUTRAL_POINT) / RATING_SCALE_RANGE) * 100 * confidence * rating_source_weight
                     intent_id = row.get("intent_id", "_all")
                     per_domain_intent[domain][intent_id]["ratings"].append(rating_normalized)
                 except ValueError:

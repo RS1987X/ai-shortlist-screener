@@ -448,6 +448,34 @@ S_score = (rating / 5.0) * 100 * confidence
 - Threshold of 25 reviews provides ±10% margin of error at 95% confidence
 - Balances statistical rigor with practical achievability
 - Penalizes retailers relying on sparse, unreliable ratings
+
+**Impact:** Retailers with low review counts (4-20 avg) saw S score drops of 30-70 points. See [docs/confidence_weighting.md](confidence_weighting.md) for full analysis.
+
+### S (Service) Dimension: Centered Scoring (v1.2.1)
+
+S scoring has been redesigned to **center at 3.5/5 as the neutral point**, creating active avoidance of poorly-rated retailers rather than just ranking them lower.
+
+**New Formula:**
+```python
+S = ((rating - 3.5) / 1.5) * 100 * confidence
+```
+
+**Score Mapping:**
+- **5.0/5 → S=+100** (maximum boost, strongly recommend)
+- **4.0/5 → S=+33** (good boost, recommend)
+- **3.5/5 → S=0** (neutral, no impact on LAR)
+- **3.0/5 → S=-33** (penalty, caution warning)
+- **2.0/5 → S=-100** (maximum penalty, actively avoid)
+
+**Why This Matters:**
+- **Old approach**: 2.0/5 rating added +4 points to LAR (no active avoidance)
+- **New approach**: 2.0/5 rating subtracts -10 points from LAR (red flag)
+- Aligns with human psychology: we don't just "slightly prefer" good ratings, we actively **run from** bad ones
+- Prevents AI from recommending sketchy retailers just because "it's better than nothing"
+
+**Impact:** Minimal LAR changes for Swedish retailers (most have 4.0-5.0 ratings). The real benefit shows when encountering hypothetical 2-3 star retailers—AI would now actively avoid them.
+
+See [docs/centered_s_scoring.md](centered_s_scoring.md) for complete analysis, theoretical justification, and AI behavior examples.
 - Rewards consistent quality across well-reviewed products
 
 **Impact:** Retailers with low review counts (e.g., Elgiganten avg 4.4 reviews) see S scores drop 70-80%. Retailers with solid review volumes (e.g., Rusta avg 61 reviews) maintain high scores.

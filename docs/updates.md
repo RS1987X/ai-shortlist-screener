@@ -270,3 +270,85 @@ FALLBACK_RATING_WEIGHT = 0.9      # JS ratings slightly discounted
 
 ---
 
+## 6. S Dimension: Centered Scoring (v1.2.1)
+
+### Problem: No Active Avoidance of Poor Ratings
+
+With linear 0-100 scaling (v1.2.0), even poor ratings contributed positively to LAR:
+- 5.0/5 rating → S=100 → adds +10 points to LAR ✓
+- 3.5/5 rating → S=70 → adds +7 points to LAR ~
+- **2.0/5 rating → S=40 → adds +4 points to LAR** 🚨
+
+**Issue:** The AI doesn't actively **avoid** poorly-rated retailers—it just ranks them lower. If a product is only available at a 2-star retailer, the AI would still recommend it.
+
+**Human behavior:** We don't just "slightly prefer" good ratings—we actively **run from** bad ones. A 2-star rating signals problems: late delivery, poor service, scams.
+
+### Solution: Centered at 3.5/5 as Neutral Point
+
+New formula creates active avoidance:
+
+```python
+S = ((rating - 3.5) / 1.5) * 100 * confidence * source_weight
+```
+
+**Score mapping:**
+
+| Rating | S Score | Impact on LAR | AI Behavior |
+|--------|---------|---------------|-------------|
+| 5.0/5 | **+100** | +10 points | ✓✓ Strongly recommend |
+| 4.0/5 | **+33** | +3.3 points | ✓ Recommend |
+| 3.5/5 | **0** | No change | ~ Neutral (ignore S) |
+| 3.0/5 | **-33** | -3.3 points | ⚠ Caution warning |
+| 2.0/5 | **-100** | -10 points | ✗ Actively avoid (red flag) |
+
+### Real-World Impact
+
+**Swedish retailers (mostly 4.0-5.0 ratings):**
+
+| Retailer | Avg Rating | Old S (v1.2.0) | New S (v1.2.1) | Change |
+|----------|-----------|---------------|---------------|--------|
+| Rusta | 4.99/5 | 78.4 | **77.8** | -0.6 |
+| NetOnNet | 4.01/5 | 46.9 | **34.3** | -12.6 |
+| Clas Ohlson | 4.17/5 | 42.1 | **28.2** | -13.8 |
+| Elgiganten | 4.43/5 | 14.0 | **10.9** | -3.1 |
+
+**Observation:** Minimal LAR changes because most retailers have good ratings (4.0-5.0). The real benefit appears when encountering hypothetical 2-3 star retailers—AI would now actively avoid them instead of just ranking lower.
+
+### Why This Matters for AI Agents
+
+**Scenario:** AI needs to recommend where to buy a product.
+
+**Old approach (linear 0-100):**
+```
+Base LAR = 40.5 (E=70, X=30, A=20)
++ 2.0/5 retailer: LAR = 40.5 + 4.0 = 44.5  (still recommended!)
+```
+
+**New approach (centered at 3.5):**
+```
+Base LAR = 40.5 (E=70, X=30, A=20)
++ 2.0/5 retailer: LAR = 40.5 - 10.0 = 30.5  (RED FLAG, avoid!)
+```
+
+AI now behaves like a cautious human: **excellence is rewarded, mediocrity is ignored, poor service is actively penalized.**
+
+### Theoretical Justification
+
+1. **Human Psychology:** Loss aversion means negative experiences weigh more heavily than positive ones
+2. **Signal Quality:** 3.5/5 is "no information" (S=0); meaningful deviations signal excellence or problems
+3. **Risk Reduction:** Prevents AI from recommending sketchy retailers just because "better than nothing"
+4. **Industry Alignment:** Amazon, Yelp, Google all effectively filter out <3.5 rated options
+
+### Configuration
+
+Constants in `src/asr/config.py`:
+```python
+RATING_NEUTRAL_POINT = 3.5  # Middle of 1-5 scale
+RATING_SCALE_RANGE = 1.5    # Distance from neutral to max (5.0 - 3.5)
+RATING_CONFIDENCE_THRESHOLD = 25  # Still using confidence from v1.2.0
+```
+
+**See:** [docs/centered_s_scoring.md](centered_s_scoring.md) for complete analysis, AI behavior examples, and future enhancements.
+
+---
+
