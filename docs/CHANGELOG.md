@@ -6,6 +6,49 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.2.1] - 2025-10-31
+
+### Added
+- **Centered S Scoring with 3.5/5 as Neutral Point**
+  - S scores now range -100 to +100 (was 0-100), centered at 3.5/5
+  - Formula: `S = ((rating - 3.5) / 1.5) × 100 × confidence`
+  - Creates active avoidance of poorly-rated retailers (not just lower ranking)
+  - New configuration: `RATING_NEUTRAL_POINT = 3.5`, `RATING_SCALE_RANGE = 1.5`
+
+- **Comprehensive Documentation for Centered Scoring**
+  - `docs/centered_s_scoring.md`: Full analysis with AI behavior examples
+  - Theoretical justification: human psychology, loss aversion, industry practices
+  - Comparison of old vs new approaches with decision-making scenarios
+  - Future enhancements: Bayesian averaging, recency weighting, variance penalty
+
+### Changed
+- **S Dimension Now Uses Symmetric Value Scale**
+  - 5.0/5 rating → S=+100 → adds +10 points to LAR (strongly recommend)
+  - 4.0/5 rating → S=+33 → adds +3.3 points to LAR (recommend)
+  - 3.5/5 rating → S=0 → no LAR impact (neutral baseline)
+  - 3.0/5 rating → S=-33 → subtracts -3.3 points from LAR (caution)
+  - 2.0/5 rating → S=-100 → subtracts -10 points from LAR (actively avoid)
+
+- **LAR Rankings Slightly Adjusted**
+  - NetOnNet remains #1 (42.02, down from 43.29)
+  - Rusta remains #2 (34.21, down from 34.27)
+  - Minimal changes since most Swedish retailers have 4.0-5.0 ratings
+  - Real benefit shows when encountering hypothetical 2-3 star retailers
+
+### Impact
+- **Active Avoidance Behavior:** AI now treats poor ratings as RED FLAGS, not just "less preferred"
+- **Aligns with Human Psychology:** We actively run from bad ratings, not just "slightly prefer" good ones
+- **Prevents Risky Recommendations:** AI won't recommend sketchy retailers just because "better than nothing"
+- **Industry Alignment:** Matches Amazon, Yelp, Google practices of filtering <3.5 ratings
+
+### Technical Details
+- Modified `compute_lar()` and `compute_weighted_lar()` in src/asr/lar.py
+- Added centered scoring constants to src/asr/config.py
+- **Breaking change:** S scores can now be negative (subtract from LAR)
+- Backward compatible: Simply recompute LAR from existing audit data
+
+---
+
 ## [1.2.0] - 2025-10-31
 
 ### Added
