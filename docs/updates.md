@@ -140,3 +140,75 @@ Rationale:
 - `ident_brand_mpn` (1/0)
 
 These additions are non-breaking; existing consumers using `product_score`, `family_score`, and policy/spec columns continue to work.
+
+---
+
+## 4. X Dimension Analysis & Specs Detection Gap
+
+### Findings from Full Audit (227 URLs, Oct 31 2025)
+
+**Policy Coverage:**
+- Structured policy on product page: ~45% (NetOnNet, Elgiganten lead)
+- Policy page links only: ~95% (nearly universal)
+- No policy information: ~5%
+
+**Technical Specifications with Units:**
+- Coverage: **0% across ALL retailers** ❌
+
+### Analysis: Likely Detection Issue
+
+The 0% specs coverage is almost certainly a **detection/parsing issue**, not total absence:
+
+**Evidence specs exist:**
+1. Product pages visibly show technical specs (tables, bullet lists)
+2. Examples: "Resolution: 1920x1080", "Power: 65W", "Length: 10m"
+3. Retailers wouldn't omit basic product details
+
+**Why our parser misses them:**
+1. **Unstructured formats:** Specs in description text, HTML tables (not Schema.org)
+2. **Non-standard Schema.org:** May use `PropertyValue`, `additionalProperty` patterns we don't parse
+3. **Overly strict detection:** Looking for specific patterns, missing valid variations
+
+### Implications for v1.1.0
+
+**Current rankings (fair):**
+- ✅ All retailers score 0 on specs → no unfair penalty
+- ✅ X dimension = policy only (specs contribute 0 points across board)
+- ✅ Intent-based sampling balances product types across retailers
+
+**X dimension calculation:**
+```
+X = x_policy + x_specs  (max 100)
+x_policy: 0-50 pts (tiered: structured=50, link=25, none=0)
+x_specs: 0-50 pts (with units=50, none=0)
+```
+
+**Current reality:** X = x_policy + 0 for all retailers
+
+**Category bias potential (theoretical):**
+- Electronics/tools: More meaningful specs (watts, resolution, cm)
+- Consumables/accessories: Fewer technical specs worth capturing
+- Different retailers serve different intents/categories
+- **Mitigation:** Intent-based URL discovery ensures comparable product sampling
+
+### Recommendations (Deprioritized for v1.1.0)
+
+1. **Improve specs detection** (`src/asr/parse.py`):
+   - Parse `PropertyValue` arrays in Product schema
+   - Extract `additionalProperty` nested structures
+   - Consider fallback to HTML table parsing
+
+2. **Manual validation**:
+   - Check 5-10 products per retailer manually
+   - Verify specs actually exist vs truly missing
+   - Assess detection accuracy
+
+3. **Category-specific weights**:
+   - Electronics: Higher spec weight (meaningful technical details)
+   - Consumables: Lower spec weight (fewer relevant specs)
+   - Requires category taxonomy and per-retailer mapping
+
+**Status:** Documented for transparency, acknowledged as limitation, not blocking release.
+
+---
+

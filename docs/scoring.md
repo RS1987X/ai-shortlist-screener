@@ -322,6 +322,91 @@ Scoring weights and thresholds are configurable in `src/asr/config.py`.
 
 ---
 
+## X (eXtensibility) Dimension
+
+The X dimension measures how well AI can **extend** the shopping experience beyond basic product information. It consists of two independent components:
+
+### X Calculation
+
+```
+X = x_policy + x_specs  (max 100 points)
+```
+
+### 1. Policy Information (max 50 points)
+
+Tiered scoring based on policy data richness:
+
+- **50 pts:** Structured policy on product page (`policy_structured=1`)
+  - `hasMerchantReturnPolicy` or `hasWarrantyPromise` fields in Product/Offer JSON-LD
+  - Enables AI to extract and compare policies programmatically
+  
+- **40 pts:** Structured policy on separate policy page (`policy_structured_on_policy_page=1`)
+  - MerchantReturnPolicy schema on dedicated policy pages
+  - Good but requires AI to follow links
+  
+- **25 pts:** Links to policy pages only (`policy_link=1`)
+  - HTML links containing "return", "warranty", "shipping"
+  - Basic discoverability, requires text extraction
+  
+- **0 pts:** No policy information
+
+**Why this matters:**
+- "Show me USB hubs with free returns"
+- "Which monitors have a 2-year warranty?"
+- AI can filter/rank by policy criteria only with structured data
+
+### 2. Technical Specifications (max 50 points)
+
+- **50 pts:** Product has technical specs with units (`specs_units=1`)
+  - Examples: "Resolution: 1920x1080", "Power: 65W", "Length: 10cm"
+  - Enables AI to answer technical questions precisely
+  
+- **0 pts:** No specs or specs without units
+
+**Why this matters:**
+- "Find HDMI cables longer than 5 meters"
+- "Show me monitors with 4K resolution"
+- AI needs structured units for comparisons and filtering
+
+### Current Industry Status (Oct 2025)
+
+**Audit findings across 227 Swedish retail product pages:**
+
+| Component | Coverage | Status |
+|-----------|----------|--------|
+| Policy structured | ~45% | ⚠️ Mixed adoption |
+| Policy links | ~95% | ✅ Nearly universal |
+| Specs with units | **0%** | ❌ **Industry gap** |
+
+**Key insights:**
+
+1. **Policy data:** Mixed adoption. Leaders (NetOnNet, Elgiganten) have structured policies; others only have links.
+
+2. **Specs with units:** **Zero adoption** across all retailers sampled.
+   - This is likely a **detection issue** rather than total absence
+   - Retailers may have specs in unstructured formats (tables, paragraphs)
+   - Our current parser may not recognize all Schema.org spec patterns
+   - **Action item:** Improve specs detection in future versions
+
+3. **Fair comparison:** Since all retailers score 0% on specs, no one is unfairly penalized in current rankings.
+
+4. **Intent balancing:** Products sampled across standardized intents (electronics, tools, etc.) to minimize bias from product mix.
+
+### X Dimension Limitations
+
+**Product category bias potential:**
+- Electronics/tools: More meaningful specs (resolution, power, dimensions)
+- Consumables/accessories: Fewer meaningful technical specs
+- Current mitigation: Intent-based sampling ensures comparable product types across retailers
+- Future enhancement: Category-specific spec weights
+
+**Detection accuracy:**
+- Specs may exist but not be detected if in non-standard formats
+- Future work: Enhanced parsing of PropertyValue, additionalProperty patterns
+- Manual validation recommended for critical decisions
+
+---
+
 ## Updates (Oct 31, 2025)
 
 ### Tiered identifier scoring
