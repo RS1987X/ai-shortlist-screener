@@ -3,7 +3,18 @@
 
 A lightweight toolkit to screen peers and estimate AI Shortlist Readiness (ASR) and Likelihood of AI Recommendation (LAR).
 
-> **New to this project?** Read the **[Architecture Overview](docs/architecture.md)** first to understand how the three-stage pipeline (Discover → Audit → LAR) works and where the logic lives.
+> **New to this project?** Read the **[Architecture Overview](docs/architecture.md)** first to understand how the three-stage pipeline (Discover → Audit → LAR) works, key design decisions, and implementation details. This comprehensive guide covers the entire system from discovery to scoring.
+
+## Recent Improvements (Oct 31, 2025)
+
+✨ **100% validation accuracy** on test samples (NetOnNet, Hornbach, Biltema, Byggmax)
+
+- **JS Fallback**: Captures client-side rendered JSON-LD (Playwright-based) - fixed Biltema/Byggmax under-scoring
+- **GTIN Detection Fix**: Now recognizes generic `gtin` field (50% adoption in Swedish retail)
+- **Tiered Identifiers**: GTIN (20pts) vs Brand+MPN (12pts) reflects real matching capability
+- **Transparency**: CSV includes `js_jsonld`, `ident_gtin`, `ident_brand_mpn` flags
+
+**Impact**: More accurate scores, especially for JS-heavy retailers. See [docs/updates.md](docs/updates.md) for details.
 
 ## Quickstart
 

@@ -322,6 +322,35 @@ Scoring weights and thresholds are configurable in `src/asr/config.py`.
 
 ---
 
+## Updates (Oct 31, 2025)
+
+### Tiered identifier scoring
+
+To better reflect cross-retailer matchability, identifier scoring is now tiered:
+
+- Full credit when GTIN13/14 is present (`ident_gtin = 1`)
+- Discounted credit when only Brand+MPN is present (`ident_brand_mpn = 1`)
+
+Weights in `src/asr/config.py`:
+
+- `has_identifiers_gtin`: 20 pts
+- `has_identifiers_brand_mpn`: 12 pts
+
+The legacy `identifiers` column remains (1 if either is present) for backward compatibility.
+
+### JS-rendered JSON-LD fallback (discounted)
+
+Some retailers inject JSON-LD via JavaScript. The audit now performs a single headless render when needed to capture JSON-LD and ratings in one pass. To reflect crawlability/accessibility costs, JS-rendered JSON-LD carries a slightly lower weight than server-rendered JSON-LD:
+
+- `has_jsonld`: 20 pts (server-rendered, initial HTML)
+- `has_jsonld_js`: 15 pts (JS-injected)
+
+New transparency fields in `audit_results.csv`:
+
+- `js_jsonld` (1/0), `ident_gtin` (1/0), `ident_brand_mpn` (1/0)
+
+---
+
 ## Related Documentation
 
 - LAR model overview: `docs/methodology.md`

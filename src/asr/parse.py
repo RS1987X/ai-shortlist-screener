@@ -30,9 +30,15 @@ def product_identifiers(p):
     brand = p.get("brand")
     if isinstance(brand, dict):
         brand = brand.get("name")
+    
+    # Schema.org accepts both generic 'gtin' and specific variants
+    # Generic 'gtin' can be any length (8/12/13/14 digits)
+    gtin_generic = p.get("gtin")
+    
     return {
         "sku": p.get("sku"),
         "mpn": p.get("mpn"),
+        "gtin": gtin_generic,  # Generic GTIN (any length)
         "gtin8": p.get("gtin8"),
         "gtin12": p.get("gtin12"),
         "gtin13": p.get("gtin13"),
