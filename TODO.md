@@ -75,7 +75,7 @@
 ---
 
 ### Phase 3: S Dimension Enhancement (Optional)
-**Goal:** Expand rating coverage beyond product pages
+**Goal:** Expand rating coverage beyond product pages and analyze review content
 
 - [ ] **Prisjakt Integration** (Swedish price comparison)
   - [ ] Research Prisjakt scraping/API options
@@ -88,6 +88,23 @@
   - [ ] Extract company-level ratings
   - [ ] Weight: 0.5x (service ratings, not product ratings)
   - [ ] Add to S dimension calculation
+
+- [ ] **Google Reviews Integration** (Company ratings)
+  - [ ] Research Google Places API / Google My Business
+  - [ ] Extract company-level ratings and review counts
+  - [ ] Weight: 0.5x (service ratings, not product ratings)
+  - [ ] Add to S dimension calculation
+
+- [ ] **Product Review Content Analysis** (NEW)
+  - [ ] Extract review text/comments from product pages
+  - [ ] Analyze sentiment of product reviews
+  - [ ] Extract key themes: delivery, quality, customer service
+  - [ ] Consider: Review helpfulness signals (verified purchase, helpful votes)
+  - [ ] Potential metrics:
+    - Average sentiment score per retailer
+    - Topic distribution (product quality vs service issues)
+    - Review authenticity signals
+  - [ ] Integration: Could enhance S dimension or create new quality signal
 
 - [ ] **Re-calculate LAR with Enhanced S**
   - [ ] Run LAR with expanded S dimension
