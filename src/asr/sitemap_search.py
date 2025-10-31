@@ -6,6 +6,7 @@ needing search endpoints or JavaScript rendering.
 """
 
 import csv
+import gzip
 import time
 import re
 import xml.etree.ElementTree as ET
@@ -20,17 +21,20 @@ from functools import lru_cache
 SITEMAP_URLS = {
     "biltema.se": "https://www.biltema.se/globalassets/sitemaps/sitemapindex-sv.xml",
     "bygghemma.se": "https://www.bygghemma.se/sitemap.xml",
-    "byggmax.se": "https://www.byggmax.se/pub/media/Sitemap_sv_se_category.xml",
-    "clasohlson.com": "https://www.clasohlson.com/sitemap.xml",
+    "byggmax.se": "https://www.byggmax.se/pub/media/Sitemap_sv_se_product.xml",
+    "clasohlson.com": "https://www.clasohlson.com/sitemap/sitemap_product_se.xml",
     "distit.se": "https://distit.se/sv/wp-sitemap.xml",
     "elgiganten.se": "https://www.elgiganten.se/sitemaps/OCSEELG.pdp.index.sitemap.xml",
     "hornbach.se": "https://www.hornbach.se/sitemap/sitemap.xml",
-    "jula.se": "https://www.jula.se/sitemap.1.xml",
+    "jula.se": "https://www.jula.se/sitemap.1.xml",  # Blocked by Cloudflare (403)
+    "netonnet.se": "https://www.netonnet.se/art/sitemap.xml",
     "k-bygg.se": "https://k-bygg.se/sitemap/index.xml",
     "kjell.com": "https://www.kjell.com/sitemap.xml",
     "mekonomen.se": "https://d3sjey3kqst1or.cloudfront.net/media/categories_cms_google_sitemap.xml",
-    "rusta.com": "https://www.rusta.com/sitemap.xml",
-    # Note: netonnet.se, dustin.se, alligo.com, beijerbygg.se don't have sitemaps in robots.txt
+    "rusta.com": "https://www.rusta.com/sitemap.xml?batch=0&language=sv-se",  # Swedish-language product sitemap
+    # Cloudflare-blocked (403): dustin.se (https://www.dustin.se/product-sitemap.xml), jula.se
+    # No sitemap: beijerbygg.se, alligo.com (no e-commerce)
+    # Use --use-api flag for Google API fallback for blocked retailers
 }
 
 
@@ -46,7 +50,20 @@ class SitemapSearcher:
         """
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self.client = httpx.Client(timeout=30.0)
+        self.client = httpx.Client(
+            timeout=30.0,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                "Accept-Language": "sv-SE,sv;q=0.9,en-US;q=0.8,en;q=0.7",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Connection": "keep-alive",
+                "Upgrade-Insecure-Requests": "1",
+            },
+            follow_redirects=True,
+        )
+        # Cache loaded URLs per domain to avoid reloading for every search
+        self._domain_urls_cache: Dict[str, List[str]] = {}
     
     def __enter__(self):
         """Context manager entry."""
@@ -93,6 +110,114 @@ class SitemapSearcher:
             print(f"  Error fetching sitemap index: {e}")
             return []
     
+    def is_product_detail_page(self, url: str, sitemap_url: str = None) -> bool:
+        """
+        Check if a URL is a product detail page (PDP) vs category/listing page.
+        
+        Strategy: Require positive evidence of a PDP (product ID pattern).
+        For sitemaps explicitly named as product/pdp sitemaps, use relaxed filtering.
+        
+        Args:
+            url: URL to check
+            sitemap_url: Optional sitemap source URL for context-aware filtering
+        
+        Returns:
+            True if it has a clear product ID pattern or comes from trusted product sitemap
+        """
+        url_lower = url.lower()
+        
+        # Check if sitemap indicates high confidence that URLs are products
+        # Look for "product", "pdp", or "produkt" in sitemap filename
+        relaxed_filter = False
+        if sitemap_url:
+            sitemap_lower = sitemap_url.lower()
+            # Trust sitemaps with explicit product/pdp indicators
+            if any(indicator in sitemap_lower for indicator in [
+                'product_sitemap', 'product-sitemap', 'pdp',
+                'sitemap_product', 'sitemap-product',
+                '_product.xml', '-product.xml',
+                'produktsitemap', 'produkt-sitemap'
+            ]):
+                relaxed_filter = True
+        
+        # Immediate disqualifiers (category/filter indicators) - apply even in relaxed mode
+        category_signals = [
+            r'/c/',          # Category path
+            r'/f/',          # Filter path
+            r'\?filter',     # Filter query param
+            r'&filter',
+            r'\?category',
+            r'&category',
+        ]
+        
+        for pattern in category_signals:
+            if re.search(pattern, url_lower):
+                return False
+        
+        # Positive PDP patterns: Must have a clear product identifier
+        pdp_patterns = [
+            # Explicit product ID markers
+            r'/p-\d+(?:[/?#]|$)',           # bygghemma.se: /p-1234567
+            r'/p/\d+(?:[/?#-]|$)',          # clasohlson: /p/41-2664 (note: allows - after digits for variant)
+            r'/p\d{5,}(?:[/?#]|$)',         # kjell.com: /p65105 (5+ digits)
+            r'-p\d{5,}(?:[/?#]|$)',         # variant: -p12345
+            r'/art-?\d{5,}(?:[/?#]|$)',     # article numbers: /art-12345 or /art12345
+            r'/sku-?\d{5,}(?:[/?#]|$)',     # SKU: /sku-12345 or /sku12345
+            r'/artikel-\d+(?:[/?#]|$)',     # article: /artikel-123
+            r'/produkt/\d+(?:[/?#]|$)',     # product with ID: /produkt/123
+            r'/product/[^/]+/\d+(?:[/?#]|$)',  # elgiganten: /product/category/292453
+            r'/item-\d+(?:[/?#]|$)',        # item: /item-123
+            r'/i-\d+(?:[/?#]|$)',           # short item: /i-123
+            
+            # URLs ending with long numeric product IDs (7+ digits or long alphanumeric)
+            # Matches: /fully-synthetic-engine-oil-0w-20-4-litre-2000035833
+            r'-\d{7,}(?:[/?#]|$)',          # ends with 7+ digit product ID
+            r'/\d{6,}(?:[/?#]|$)',          # path segment is just 6+ digits
+        ]
+        
+        # Check if URL has a product ID pattern
+        has_product_id = any(re.search(p, url_lower) for p in pdp_patterns)
+        
+        if has_product_id:
+            return True
+        
+        # In relaxed mode (trusted product sitemap), accept slug-only URLs more liberally
+        if relaxed_filter:
+            parsed = urlparse(url_lower)
+            path_segments = [s for s in parsed.path.split('/') if s]
+            
+            # In relaxed mode, accept 3+ segments (instead of 4+)
+            # Example: /kok-och-bad/duscharmatur/duschset-chrome (category/subcat/product)
+            if len(path_segments) >= 3:
+                last_segment = path_segments[-1]
+                # Still reject obvious category endings
+                generic_endings = [
+                    'products', 'produkter', 'items', 'catalog', 'katalog',
+                    'all', 'alla', 'search', 'sok', 'list', 'lista',
+                    'categories', 'kategorier'
+                ]
+                if last_segment not in generic_endings:
+                    return True
+        
+        # Strict fallback for slug-only URLs (e.g., Rusta): Accept if path is deep enough (4+ segments)
+        # and doesn't look like a category listing
+        # Example: /sv-se/gor-det-sjalv/inomhusfarg/snickeri--och-lackfarg/kvistlack-038-liter
+        parsed = urlparse(url_lower)
+        path_segments = [s for s in parsed.path.split('/') if s]
+        
+        # Require at least 4 path segments (lang/cat1/cat2/product) to be considered a product
+        if len(path_segments) >= 4:
+            # Reject if last segment looks too generic (common category page endings)
+            last_segment = path_segments[-1]
+            generic_endings = [
+                'products', 'produkter', 'items', 'catalog', 'katalog',
+                'all', 'alla', 'search', 'sok', 'list', 'lista'
+            ]
+            if last_segment not in generic_endings:
+                return True
+        
+        return False
+    
     def extract_urls_from_sitemap(self, sitemap_url: str) -> List[str]:
         """
         Extract all product URLs from a sitemap.
@@ -101,17 +226,44 @@ class SitemapSearcher:
             sitemap_url: URL of the sitemap
         
         Returns:
-            List of product URLs
+            List of product URLs (filtered to PDPs only)
         """
         try:
             resp = self.client.get(sitemap_url)
             resp.raise_for_status()
+
+            content = resp.content
             
-            root = ET.fromstring(resp.content)
+            # Handle compressed content (gzip only - httpx auto-handles brotli if library installed)
+            # Check for gzip by URL suffix or magic bytes
+            if sitemap_url.endswith('.gz') or (len(content) >= 2 and content[:2] == b'\x1f\x8b'):
+                try:
+                    content = gzip.decompress(content)
+                except Exception:
+                    # If server already decompressed due to Accept-Encoding, ignore
+                    pass
+
+            root = ET.fromstring(content)
+
+            # If this is a sitemap index (nested sitemaps), return nested URLs recursively
+            sitemap_nodes = root.findall('.//{http://www.sitemaps.org/schemas/sitemap/0.9}sitemap/{http://www.sitemaps.org/schemas/sitemap/0.9}loc')
+            if sitemap_nodes:
+                all_urls: List[str] = []
+                for node in sitemap_nodes:
+                    loc = (node.text or '').strip()
+                    if not loc:
+                        continue
+                    all_urls.extend(self.extract_urls_from_sitemap(loc))
+                return all_urls
+
+            # Otherwise parse URL set and filter to PDPs only
             urls = root.findall('.//{http://www.sitemaps.org/schemas/sitemap/0.9}loc')
-            
-            return [url.text for url in urls if url.text]
-        
+            pdp_urls = [
+                url.text for url in urls 
+                if url.text and self.is_product_detail_page(url.text, sitemap_url)
+            ]
+            return pdp_urls
+
         except Exception as e:
             print(f"  Error fetching sitemap {sitemap_url}: {e}")
             return []
@@ -120,6 +272,8 @@ class SitemapSearcher:
         """
         Get all product URLs for a domain.
         
+        Uses in-memory cache to avoid reloading sitemaps for the same domain.
+        
         Args:
             domain: Retailer domain
             limit: Maximum number of sitemaps to fetch (for testing)
@@ -127,6 +281,12 @@ class SitemapSearcher:
         Returns:
             List of all product URLs
         """
+        # Check cache first
+        if domain in self._domain_urls_cache:
+            print(f"  ✓ Using cached URLs for {domain} ({len(self._domain_urls_cache[domain])} URLs)")
+            return self._domain_urls_cache[domain]
+        
+        # Not in cache, load from sitemaps
         sitemaps = self.get_sitemap_index(domain)
         
         if limit:
@@ -140,6 +300,10 @@ class SitemapSearcher:
             time.sleep(0.5)  # Be polite
         
         print(f"  ✓ Loaded {len(all_urls)} product URLs from {len(sitemaps)} sitemaps")
+        
+        # Cache the results
+        self._domain_urls_cache[domain] = all_urls
+        
         return all_urls
     
     def normalize_text(self, text: str) -> str:
@@ -175,29 +339,73 @@ class SitemapSearcher:
         
         # Get product type from prompt/category
         product_type = category.replace('-', ' ') if category else ""
-        
-        # Extract key terms from prompt (first few words)
-        prompt_clean = re.sub(r'under\s+\d+\s*kr.*', '', prompt)  # Remove price
-        prompt_clean = re.sub(r'\d+[×x]', '', prompt_clean)  # Remove quantities
-        
+
+        # Extract key descriptive terms from prompt (first few words)
+        prompt_clean = re.sub(r'under\s+\d+\s*kr.*', '', prompt or "")  # Remove price hints
+        prompt_clean = re.sub(r'\d+[×x]', '', prompt_clean)  # Remove quantities like 2x/3×
+        # Normalize common tokens: wi-fi -> wifi; fix superscripts m²/m³ -> m2/m3
+        prompt_clean = re.sub(r'\bwi[-\s]?fi\b', 'wifi', prompt_clean, flags=re.IGNORECASE)
+        prompt_clean = prompt_clean.replace('m²','m2').replace('m³','m3')
+
+        # Filter out stopwords, pure numbers, and unit-only tokens from prompt words
         swedish_stopwords = {'med', 'och', 'för', 'till', 'som', 'i', 'på', 'av', 'från', 'enl'}
-        words = [w for w in self.normalize_text(prompt_clean).split() if w not in swedish_stopwords][:4]
-        
-        # Extract specs from constraints
+        UNIT_TOKENS_LOCAL = {
+            'mm','cm','m','l','cl','dl','ml','hz','khz','mhz','ghz','w','kw','v','kv',
+            'mah','ah','gb','mb','tb','lm','db','bar','tum','k','kwh'
+        }
+        words_all = self.normalize_text(prompt_clean).split()
+        words = []
+        for w in words_all:
+            if w in swedish_stopwords:
+                continue
+            # skip pure numeric tokens (e.g., "20", "000", "1.5")
+            if re.fullmatch(r'\d+(?:\.\d+)?', w):
+                continue
+            # skip unit-only tokens without numbers (e.g., "mah", "w")
+            if w in UNIT_TOKENS_LOCAL:
+                continue
+            words.append(w)
+        words = words[:4]
+
+        # Extract specs (numeric + unit) from prompt, category, and constraints
         specs = []
-        
-        # Numeric specs (20000mah, 4k, 100w, etc.) - normalize spaces in numbers
-        # Handle "20 000 mAh" -> "20000mah" and keep decimals like "1.5L" intact
-        constraints_normalized = re.sub(r'(\d+)\s+(\d+)', r'\1\2', constraints)  # Remove spaces in numbers
-        numeric_specs = re.findall(r'\d+(?:\.\d+)?\s*(?:mah|k|w|hz|gb|l|mm|m|tum|bar|ghz)', constraints_normalized, re.IGNORECASE)
-        specs.extend([self.normalize_text(s).replace(' ', '') for s in numeric_specs])  # Remove any remaining spaces
-        
+        combined_for_specs = ' '.join(filter(None, [prompt, category, constraints]))
+        # Normalize common tokens: wi-fi -> wifi; fix superscripts m²/m³ -> m2/m3
+        combined_for_specs = re.sub(r'\bwi[-\s]?fi\b', 'wifi', combined_for_specs, flags=re.IGNORECASE)
+        combined_for_specs = combined_for_specs.replace('m²','m2').replace('m³','m3')
+        # Normalize spaces inside numbers: "20 000 mAh" -> "20000 mAh"
+        combined_for_specs = re.sub(r'(\d+)\s+(\d+)', r'\1\2', combined_for_specs)
+        # Numeric specs (e.g., 20000mah, 4k, 100w, 1.5l, 240hz, 500gb, 300mbps)
+        UNIT_PATTERN = (
+            r'mah|ah|wh|watt|w|kw|va|v|mv|kv|a|ma|hz|khz|mhz|ghz|db|lm|lux|cd|'
+            r'k|kb|mb|gb|tb|bps|mbps|gbps|l|dl|cl|ml|m2|m3|m|cm|mm|um|nm|km|'
+            r'in|inch|ft|tum'
+        )
+        numeric_specs = re.findall(rf'\b\d+(?:\.\d+)?\s*(?:{UNIT_PATTERN})\b', combined_for_specs, re.IGNORECASE)
+        # e.g., "20000mah" or "1.5l"
+        specs.extend([self.normalize_text(s).replace(' ', '') for s in numeric_specs])
+
         # Standards (USB-C, HDMI, PD, etc.)
-        standards = re.findall(r'\b(?:usb-c|usb|hdmi|pd|ip\d+|ax\d+|ips|hepa)\b', constraints, re.IGNORECASE)
+        standards = re.findall(r'\b(?:usb-c|usb|hdmi|pd|ip\d+|ax\d+|ips|hepa)\b', combined_for_specs, re.IGNORECASE)
         specs.extend([self.normalize_text(s) for s in standards])
-        
-        # Combine: product type + key words + specs
-        terms = [product_type] + words + specs[:3]
+
+        # Additionally, include the pure numeric part of each spec (e.g., "20000" from "20000mah")
+        numeric_only = []
+        for s in specs:
+            m = re.match(r'^(\d+(?:\.\d+)?)', s)
+            if m:
+                numeric_only.append(m.group(1))
+
+        # Deduplicate while preserving order
+        seen = set()
+        specs_dedup = []
+        for s in specs + numeric_only:
+            if s not in seen:
+                seen.add(s)
+                specs_dedup.append(s)
+
+        # Combine: product type + descriptive words + up to 4 spec tokens (including numeric-only)
+        terms = [product_type] + words + specs_dedup[:4]
         return [t for t in terms if t and len(t) > 1]  # Filter empty/short terms
     
     def score_url(self, url: str, search_terms: List[str]) -> Tuple[float, Dict]:
@@ -292,11 +500,20 @@ class SitemapSearcher:
         category_term = search_terms[0] if search_terms else None
         spec_terms = [t for t in search_terms if re.search(r'\d+', t)]  # Terms with numbers
         descriptive_terms = [t for t in search_terms[1:] if not re.search(r'\d+', t)]  # Words without numbers
-        # Any term without digits is considered a non-numeric anchor (e.g., category, standards like usb-c/hdmi)
+        # Any term without digits is a candidate non-numeric term (category, standards like usb-c/hdmi)
         non_numeric_terms = [t for t in search_terms if not re.search(r'\d+', t)]
+
+        # Define unit tokens that should NOT count as anchors by themselves (avoid 'mm' in '32mm')
+        UNIT_TOKENS = {
+            'mm','cm','m','l','cl','dl','ml','hz','khz','mhz','ghz','w','kw','v','kv',
+            'mah','ah','gb','mb','tb','lm','db','bar','tum','k','kwh'
+        }
+        # Allow a few short-but-meaningful anchors
+        SHORT_ANCHORS = {'usb','hdmi','pd','m2','wifi','mesh'}
+        anchor_terms = [t for t in non_numeric_terms if (len(t) >= 3 or t in SHORT_ANCHORS) and t not in UNIT_TOKENS]
         
-        # Get all product URLs (limit to first 5 sitemaps for speed during development)
-        all_urls = self.get_all_product_urls(domain, limit=5)
+        # Get all product URLs from all sitemaps
+        all_urls = self.get_all_product_urls(domain, limit=None)
         
         if not all_urls:
             return []
@@ -308,9 +525,9 @@ class SitemapSearcher:
         for url in all_urls:
             score, details = self.score_url(url, search_terms)
             if score > 0:
-                # Guardrail: require at least one non-numeric term match (to avoid numeric-only false positives
-                # like lengths such as 32mm/30m matching unrelated products like pool hoses)
-                has_non_numeric_match = any(t in details['matched_terms'] for t in non_numeric_terms)
+                # Guardrail: require at least one non-numeric ANCHOR match (exclude bare unit tokens like 'mm')
+                # Avoid numeric-only matches like 32mm/30m that trigger on units but don't match category/descriptor
+                has_non_numeric_match = any(t in details['matched_terms'] for t in anchor_terms)
                 if not has_non_numeric_match:
                     # Skip numeric-only matches
                     continue

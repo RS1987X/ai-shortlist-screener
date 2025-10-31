@@ -1,7 +1,8 @@
 
 import csv
 from .fetch import fetch_html
-from .parse import extract_jsonld, has_server_rendered_jsonld, classify_schema, product_identifiers, has_units, has_policy_links, extract_policy_urls
+from .parse import extract_jsonld, has_server_rendered_jsonld, classify_schema, product_identifiers, has_units, has_policy_links, extract_policy_urls, extract_ratings_fallback
+from .js_fallback import extract_ratings_js
 from .config import DEFAULT_SCORING
 
 def score_url(url: str) -> dict:
@@ -81,11 +82,12 @@ def score_url(url: str) -> dict:
     # Check if policy pages themselves have structured data
     has_policy_structured_on_policy_page = False
     if has_policy_link and not has_policy_structured:
-        # Extract policy URLs and check them
+        # Extract policy URLs and check them (limit to first 1 to avoid excessive requests)
         policy_urls = extract_policy_urls(html, url)
-        for policy_url in policy_urls[:3]:  # Limit to first 3 to avoid too many requests
+        for policy_url in policy_urls[:1]:  # Changed from [:3] to [:1] - only check first policy page
             try:
-                policy_html = fetch_html(policy_url)
+                # Use shorter timeout for policy pages (5 seconds instead of 15)
+                policy_html = fetch_html(policy_url, timeout=5.0)
                 policy_items = extract_jsonld(policy_html, policy_url)
                 # Check if policy page has MerchantReturnPolicy or WarrantyPromise
                 for item in policy_items:
@@ -110,7 +112,10 @@ def score_url(url: str) -> dict:
     specs_units = False
     rating_value = None
     rating_count = None
-    has_rating = False
+    has_rating = False  # JSON-LD rating presence
+    fb_rating_value = None
+    fb_rating_count = None
+    fb_source = ""
     
     for p in buckets["Product"]:
         ids = product_identifiers(p)
@@ -141,6 +146,18 @@ def score_url(url: str) -> dict:
             if rating_value is not None:
                 has_rating = True
                 break
+
+    # Fallback A: embedded JSON or inline JS (no JS execution)
+    if not has_rating:
+        fb = extract_ratings_fallback(html)
+        if fb:
+            fb_rating_value, fb_rating_count, fb_source = fb
+
+    # Fallback B: JS-rendered content via Playwright (always enabled, last resort)
+    if not has_rating and not fb_rating_value:
+        jsfb = extract_ratings_js(url)
+        if jsfb:
+            fb_rating_value, fb_rating_count, fb_source = jsfb
 
     w = DEFAULT_SCORING.product_weights
     product_score = (
@@ -186,17 +203,32 @@ def score_url(url: str) -> dict:
         "productgroup": int(has_productgroup),
         "product_score": product_score,
         "family_score": family_score,
+        # Ratings (JSON-LD primary)
         "has_rating": int(has_rating),
         "rating_value": rating_value if rating_value is not None else "",
         "rating_count": rating_count if rating_count is not None else "",
+        # Fallback ratings (embedded/inline)
+        "rating_value_fallback": fb_rating_value if fb_rating_value is not None else "",
+        "rating_count_fallback": fb_rating_count if fb_rating_count is not None else "",
+        "rating_source_fallback": fb_source,
     }
 
 def audit_urls(urls, out_csv: str):
+    import sys
     rows = []
-    for u in urls:
+    total = len(urls)
+    print(f"Found {total} URLs in CSV", flush=True)
+    
+    for idx, u in enumerate(urls, 1):
         u = u.strip()
         if not u:
             continue
+        
+        # Progress update every 10 URLs with explicit flush
+        if idx % 10 == 0 or idx == total:
+            print(f"  [{idx}/{total}] Auditing URLs... ({idx/total*100:.1f}%)", flush=True)
+            sys.stdout.flush()  # Force flush for nohup
+        
         try:
             rows.append(score_url(u))
         except Exception as e:
@@ -208,7 +240,15 @@ def audit_urls(urls, out_csv: str):
                 "productgroup": 0, "product_score": 0, "family_score": 0,
                 "has_rating": 0, "rating_value": "", "rating_count": ""
             })
-    fieldnames = ["url","server_jsonld","has_product","has_offer","identifiers","policies","policy_structured","policy_link","policy_structured_on_policy_page","specs_units","productgroup","product_score","family_score","has_rating","rating_value","rating_count","error"]
+    fieldnames = [
+        "url","server_jsonld","has_product","has_offer","identifiers","policies",
+        "policy_structured","policy_link","policy_structured_on_policy_page","specs_units",
+        "productgroup","product_score","family_score",
+        # Ratings
+        "has_rating","rating_value","rating_count",
+        "rating_value_fallback","rating_count_fallback","rating_source_fallback",
+        "error"
+    ]
     with open(out_csv, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=fieldnames)
         w.writeheader()

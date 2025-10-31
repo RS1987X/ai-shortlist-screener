@@ -5,6 +5,10 @@ import statistics as stats
 from pathlib import Path
 from collections import defaultdict
 
+# Weight applied to ratings derived from fallback (embedded/inline) sources.
+# JSON-LD ratings get full weight (1.0). Fallback ratings are discounted.
+FALLBACK_RATING_WEIGHT = 0.7
+
 def _root(url: str) -> str:
     return urlparse(url).netloc
 
@@ -81,12 +85,18 @@ def compute_lar(asr_report_csv: str, soa_csv: str, service_csv: str = None, out_
             x = x_policy + x_specs
             
             # Extract rating if present (normalize to 0-100 scale, assuming 5-star max)
-            rating_value = row.get("rating_value", "").strip()
+            # Prefer JSON-LD rating; if missing, use fallback with reduced weight
+            rating_value = (row.get("rating_value", "") or "").strip()
+            rating_source_weight = 1.0
+            if not rating_value:
+                rating_value = (row.get("rating_value_fallback", "") or "").strip()
+                if rating_value:
+                    rating_source_weight = FALLBACK_RATING_WEIGHT
             if rating_value:
                 try:
                     rating_float = float(rating_value)
                     # Normalize to 0-100 (assuming 5-star scale)
-                    rating_normalized = (rating_float / 5.0) * 100
+                    rating_normalized = (rating_float / 5.0) * 100 * rating_source_weight
                     per_intent[k]["_all"]["ratings"].append(rating_normalized)
                 except ValueError:
                     pass
@@ -239,11 +249,17 @@ def compute_category_weighted_lar(
             x = x_policy + x_specs
             
             # Extract rating if present (normalize to 0-100 scale, assuming 5-star max)
-            rating_value = row.get("rating_value", "").strip()
+            # Prefer JSON-LD rating; if missing, use fallback with reduced weight
+            rating_value = (row.get("rating_value", "") or "").strip()
+            rating_source_weight = 1.0
+            if not rating_value:
+                rating_value = (row.get("rating_value_fallback", "") or "").strip()
+                if rating_value:
+                    rating_source_weight = FALLBACK_RATING_WEIGHT
             if rating_value:
                 try:
                     rating_float = float(rating_value)
-                    rating_normalized = (rating_float / 5.0) * 100
+                    rating_normalized = (rating_float / 5.0) * 100 * rating_source_weight
                     intent_id = row.get("intent_id", "_all")
                     per_domain_intent[domain][intent_id]["ratings"].append(rating_normalized)
                 except ValueError:

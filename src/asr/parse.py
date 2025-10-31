@@ -1,6 +1,8 @@
 
 import extruct
 from bs4 import BeautifulSoup
+import json
+import re
 from w3lib.html import get_base_url
 
 def extract_jsonld(html: str, url: str):
@@ -119,3 +121,125 @@ def extract_policy_urls(html: str, base_url: str) -> list:
                 policy_urls.add(absolute_url)
     
     return list(policy_urls)
+
+def extract_ratings_fallback(html: str):
+    """
+    Attempt to extract rating value and count from embedded, non-JSON-LD sources
+    available in the initial HTML (no JS execution):
+      - script[type="application/json"] blobs (e.g., Hypernova/Next/SPA payloads)
+      - Inline JS assignments (limited patterns), e.g., window.CURRENT_PAGE
+
+    Returns a tuple (rating_value, rating_count, source) where values are strings
+    (to match CSV writing) or None if not found.
+    """
+    soup = BeautifulSoup(html, "lxml")
+
+    # Helper: recursively scan for rating signals inside a Python dict/list
+    def scan_obj(obj):
+        rating = None
+        count = None
+
+        rating_keys = {"ratingValue", "averageScore", "averageRating", "rating", "score"}
+        count_keys = {"ratingCount", "reviewCount", "numberOfReviews", "numberOfRatings"}
+
+        def _recurse(o):
+            nonlocal rating, count
+            if isinstance(o, dict):
+                # If this dict contains both a rating-like and count-like key, capture and stop
+                for rk in rating_keys:
+                    if rk in o and isinstance(o[rk], (int, float, str)) and rating is None:
+                        try:
+                            rating = float(str(o[rk]).replace(",", "."))
+                        except Exception:
+                            pass
+                for ck in count_keys:
+                    if ck in o and isinstance(o[ck], (int, float, str)) and count is None:
+                        try:
+                            # counts should be integers where possible
+                            count = int(str(o[ck]).split(".")[0].replace(" ", "").replace(",", ""))
+                        except Exception:
+                            pass
+                # Early exit if both found
+                if rating is not None and count is not None:
+                    return
+                for v in o.values():
+                    _recurse(v)
+            elif isinstance(o, list):
+                for it in o:
+                    _recurse(it)
+            # Primitives ignored
+
+        _recurse(obj)
+        return rating, count
+
+    # 1) Embedded JSON blobs
+    for sc in soup.find_all("script", attrs={"type": "application/json"}):
+        txt = sc.string or sc.get_text() or ""
+        if not txt.strip():
+            continue
+        try:
+            data = json.loads(txt)
+        except Exception:
+            continue
+        r, c = scan_obj(data)
+        if r is not None:
+            # Prefer integer counts; stringify for CSV
+            return str(r), (str(c) if c is not None else ""), "application/json"
+
+    # 2) Limited inline JS patterns (no full JS execution). Try to capture
+    # JSON literals from well-known JS variable assignments
+    raw = html
+
+    # Try to extract JSON objects from common JS variable patterns
+    js_var_patterns = [
+        r'window\.__NEXT_DATA__\s*=\s*({.+?});',
+        r'window\.__INITIAL_STATE__\s*=\s*({.+?});',
+        r'var\s+CURRENT_PAGE\s*=\s*({.+?});',
+        r'window\.CURRENT_PAGE\s*=\s*({.+?});',
+        r'CURRENT_PAGE\s*=\s*({.+?});',
+    ]
+    
+    for pattern in js_var_patterns:
+        match = re.search(pattern, raw, re.DOTALL)
+        if match:
+            try:
+                import json
+                data = json.loads(match.group(1))
+                r, c = scan_obj(data)
+                if r is not None:
+                    return str(r), (str(c) if c is not None else ""), "inline_js"
+            except Exception:
+                # JSON parse failed, continue to next pattern
+                pass
+
+    # Fallback: Quick-win regexes for numeric values (less reliable)
+    js_rating_patterns = [
+        r'\b"averageRating"\s*:\s*([0-9]+(?:\.[0-9]+)?)',
+        r'\b"averageScore"\s*:\s*([0-9]+(?:\.[0-9]+)?)',
+        r'\b"ratingValue"\s*:\s*([0-9]+(?:\.[0-9]+)?)',
+        r'\b"rating"\s*:\s*([0-9]+(?:\.[0-9]+)?)'
+    ]
+    js_count_patterns = [
+        r'\b"numberOfReviews"\s*:\s*([0-9]+)',
+        r'\b"numberOfRatings"\s*:\s*([0-9]+)',
+        r'\b"reviewCount"\s*:\s*([0-9]+)',
+        r'\b"ratingCount"\s*:\s*([0-9]+)'
+    ]
+
+    rating_match = None
+    for pat in js_rating_patterns:
+        m = re.search(pat, raw)
+        if m:
+            rating_match = m.group(1)
+            break
+    count_match = None
+    for pat in js_count_patterns:
+        m = re.search(pat, raw)
+        if m:
+            count_match = m.group(1)
+            break
+
+    if rating_match:
+        return rating_match, (count_match or ""), "inline_js"
+
+    return None
