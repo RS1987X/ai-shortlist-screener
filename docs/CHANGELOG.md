@@ -6,6 +6,48 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.2.0] - 2025-10-31
+
+### Added
+- **Statistical Confidence Weighting for Ratings (S Dimension)**
+  - Ratings now weighted by review count to reflect statistical reliability
+  - Formula: `confidence = min(1.0, rating_count / 25)`
+  - Threshold of 25 reviews provides ±10% margin of error at 95% CI
+  - Prevents unreliable ratings (1-5 reviews) from scoring equally to robust ratings (50-100 reviews)
+  - New configuration: `RATING_CONFIDENCE_THRESHOLD = 25` in config.py
+
+- **Comprehensive Documentation for Confidence Weighting**
+  - `docs/confidence_weighting.md`: Full statistical analysis with margin of error tables
+  - Theoretical justification based on standard error, consumer trust patterns
+  - Impact analysis showing S score adjustments of 14-71 points
+  - Alternative threshold options (10/25/50/100) with use cases
+  - Future enhancement roadmap: Bayesian averaging, recency weighting, variance penalty
+
+### Changed
+- **S Dimension Scoring Now Confidence-Weighted**
+  - Low-review retailers see appropriate score reductions (Elgiganten: -70.7 points)
+  - High-review retailers maintain strong scores with moderate adjustments (Rusta: -18.3 points)
+  - Conservative default: full confidence (1.0) if rating_count missing or invalid
+
+- **LAR Rankings Updated to Reflect Confidence**
+  - NetOnNet remains #1 (43.29, down from 46.63)
+  - Rusta moves to #2 (34.27, down from 36.10) - solid review volumes rewarded
+  - Elgiganten drops to #3 (33.12, down from 40.19) - low review counts appropriately penalized
+
+### Impact
+- **Fairer Comparisons:** Ratings with statistical backing now score higher than unreliable ratings
+- **AI Safety:** Prevents recommendations based on 1-2 potentially fake/biased reviews
+- **Aligns with Consumer Behavior:** Humans naturally trust volume + quality, not just raw ratings
+- **Industry Standard:** Follows practices of Amazon, Yelp, Google Reviews, TripAdvisor
+
+### Technical Details
+- Modified `compute_lar()` and `compute_weighted_lar()` in src/asr/lar.py
+- Centralized configuration constants in src/asr/config.py
+- No breaking changes: backward compatible with existing audit data
+- Conservative handling: missing rating_count defaults to full confidence
+
+---
+
 ## [1.1.0] - 2025-10-31
 
 ### Added
