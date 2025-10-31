@@ -12,6 +12,48 @@ The sitemap-based discovery method finds product URLs by **downloading and searc
 
 ---
 
+## Retailer Coverage
+
+### ✅ Working Sitemaps (13 retailers)
+
+The following retailers have accessible sitemaps and work with automated discovery:
+
+- Biltema
+- Bygghemma
+- Byggmax
+- Clas Ohlson (Swedish product sitemap)
+- DistIT (note: mainly news/blog, not products)
+- Elgiganten
+- Hornbach
+- K-Bygg (K-rauta)
+- Kjell & Company
+- Mekonomen
+- NetOnNet
+- Rusta
+
+### ❌ Cloudflare-Protected (2 retailers)
+
+These retailers have sitemaps listed in robots.txt but **block programmatic access** with Cloudflare Bot Management:
+
+- **Dustin** - Sitemap exists at `https://www.dustin.se/product-sitemap.xml` but returns 403 for automated requests
+- **Jula** - Sitemap exists at `https://www.jula.se/sitemap.1.xml` but returns 403 for automated requests
+
+**Workarounds:**
+1. **Google API fallback** (recommended) - Use `asr discover --use-api` to fetch via Google Custom Search
+2. **Playwright browser automation** - Use headless Chrome to bypass bot detection (slower, more complex)
+3. **Manual download** - Download sitemaps manually in browser and commit to repo
+4. **Skip for now** - Continue with 13 working retailers
+
+### ❌ No Sitemap Available (1 retailer)
+
+- **Beijer Bygg** - No sitemap in robots.txt
+
+### ⚠️ No E-commerce Site
+
+- **Alligo** - B2B holding company without public product catalog
+
+---
+
 ## How It Works
 
 ### 1. Download Product Catalog
